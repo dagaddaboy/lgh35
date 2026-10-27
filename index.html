@@ -219,7 +219,10 @@ const mat={
   frame:M(0xe9ebea,{roughness:.4}), glass:new THREE.MeshPhysicalMaterial({color:0xbfe0ea,transparent:true,opacity:.28,roughness:.05,clippingPlanes:C,depthWrite:false}),
   frost:new THREE.MeshPhysicalMaterial({color:0xe8eef0,transparent:true,opacity:.7,roughness:.6,clippingPlanes:C}),
   leaf:M(0xfafaf8,{roughness:.5}), plant:M(0x4f7a4a), pot:M(0xc9c4ba), ctx:M(0xd2d6d5), ctx2:M(0xbfc5c3), rail:M(0x4a5050,{roughness:.4,metalness:.4}),
-  screen:M(0x111414,{roughness:.2}), cushion:M(0x5d7370), mustard:M(0xc29a4b)
+  screen:M(0x111414,{roughness:.2}), cushion:M(0x5d7370), mustard:M(0xc29a4b),
+  kfront:M(0xbfb8aa,{roughness:.55}), kstone:M(0x6f655b,{roughness:.7}), kplinth:M(0xf1f0ec,{roughness:.6}),
+  inox:M(0xb4b6b4,{roughness:.32,metalness:.55}), glassblk:M(0x16191a,{roughness:.15}), led:new THREE.MeshBasicMaterial({color:0xffe2b0,clippingPlanes:C}),
+  landsk:M(0x55595a,{roughness:.95})
 };
 
 function box(x0,x1,y0,y1,z0,z1,m,parent=fixed,cast=true){
@@ -325,19 +328,54 @@ box(-0.95,1.26,-0.05,1.1,9.04,9.08,mat.glass,ctx,false); box(-0.97,1.26,1.06,1.1
 box(5.72,7.8,-0.2,0.0,-1.9,0.59,mat.ctx,ctx,false); box(7.8,10.13,-0.2,0.6,-0.6,3.53,mat.ctx2,ctx);
 const ctxLabels=[{name:'Trapphus',p:[6.7,-0.8]},{name:'Hisschakt',p:[9.0,1.5]}];
 
-function cabinet(x0,x1,y0,y1,z0,z1,n){box(x0,x1,y0,y1,z0,z1,mat.white);for(let k=1;k<n;k++){const x=x0+(x1-x0)*k/n;box(x-.004,x+.004,y0+.02,y1-.02,z1,z1+.004,mat.counter);}}
-// Kitchen — from the measured IKEA plan (room 3160 x 3880 mm)
-box(0.02,3.86,0,.1,2.05,2.55,mat.counter);                // plinth
-box(0.0,3.88,.1,.86,2.0,2.62,mat.white);
-for(const x of[0.6,1.1,1.85,2.06,2.66,3.27]) box(x-.004,x+.004,.12,.84,2.62,2.624,mat.counter); // cabinet joints
-box(0.0,3.88,.86,.9,2.0,2.64,mat.counter);                // worktop
-box(1.15,1.46,.88,.905,2.12,2.5,mat.steel); box(1.5,1.81,.88,.905,2.12,2.5,mat.steel); // double sink
-cyl(1.48,2.08,.015,.9,1.15,mat.steel);
-box(2.69,3.24,.9,.905,2.06,2.58,mat.black);               // hob
-box(2.69,3.24,.15,.75,2.6,2.625,mat.black);               // oven
-cabinet(0.0,2.7,1.45,2.2,2.0,2.37,4); cabinet(3.23,3.88,1.45,2.2,2.0,2.37,1);
-box(2.72,3.21,1.65,2.2,2.0,2.38,mat.steel);               // hood
-box(0.0,3.88,1.45,1.46,2.0,2.37,mat.counter);
+// Kitchen — positions from the measured IKEA plan, look from Henrik's photo
+// counter wall at z=2.0, run from the window (x=0) to the smyg (x=3.88); fronts at z=2.60
+const KZ0=2.0,KZ1=2.6,KF=2.618;
+function kfront(x0,x1,y0,y1,handle){const g=.0015;box(x0+g,x1-g,y0+g,y1-g,KZ1,KF,mat.kfront);
+  if(handle){const hw=Math.min(.32,(x1-x0)*.6),cx=(x0+x1)/2,hy=handle==='top'?y1-.05:y0+.05;
+    box(cx-hw/2,cx+hw/2,hy-.006,hy+.006,KF+.018,KF+.03,mat.steel);box(cx-hw/2,cx-hw/2+.012,hy-.006,hy+.006,KF,KF+.03,mat.steel);box(cx+hw/2-.012,cx+hw/2,hy-.006,hy+.006,KF,KF+.03,mat.steel);}}
+function kdrawers(x0,x1,parts){const tot=parts.reduce((a,b)=>a+b,0);let y=.1;for(const p of parts){const h=.76*p/tot;kfront(x0,x1,y,y+h,'top');y+=h;}}
+// carcass, plinth, worktop, backsplash
+box(0.0,3.88,0,.1,KZ0,KZ1-.06,mat.kplinth);
+box(0.0,2.66,.1,.86,KZ0,KZ1,mat.kplinth); box(3.26,3.88,.1,.86,KZ0,KZ1,mat.kplinth);
+box(0.0,3.88,.86,.9,KZ0,2.635,mat.kstone);
+box(0.0,3.88,.9,1.25,KZ0,KZ0+.015,mat.kstone);
+// base run (left → right): drawers 40, dishwasher 60, sink 80, drawers 40+40, range 60, drawers 60
+box(0.0,.06,.1,.86,KZ1,KF,mat.kfront);                                   // filler at window
+kdrawers(.06,.46,[1,1,1,1,1]);
+box(.465,1.055,.1,.86,KZ1,KF+.004,mat.inox); box(.465,1.055,.80,.86,KF+.004,KF+.006,mat.glassblk); // dishwasher
+box(.56,.96,.74,.752,KF+.02,KF+.032,mat.steel);
+kfront(1.06,1.46,.1,.86,'top'); kfront(1.46,1.86,.1,.86,'top');           // sink cabinet
+kdrawers(1.86,2.26,[.8,1.1,1.1]); kdrawers(2.26,2.66,[.8,1.1,1.1]);
+kdrawers(3.26,3.88,[1,1,1]);
+// double sink + tall mixer
+box(1.13,1.43,.885,.902,2.13,2.5,mat.inox); box(1.49,1.79,.885,.902,2.13,2.5,mat.inox);
+cyl(1.46,2.08,.025,.9,.96,mat.inox); cyl(1.46,2.08,.012,.96,1.30,mat.inox);
+box(1.448,1.472,1.285,1.305,2.08,2.30,mat.inox); cyl(1.46,2.29,.011,1.20,1.30,mat.inox);
+// freestanding range (SMEG-type, 60 cm) on legs
+box(2.665,3.255,.1,.9,KZ0+.02,KZ1+.02,mat.inox);
+for(const lx of[2.71,3.21])for(const lz of[2.1,2.55])cyl(lx,lz,.018,0,.1,mat.inox);
+box(2.70,3.22,.18,.66,KZ1+.02,KZ1+.026,mat.glassblk);                   // oven door glass
+box(2.72,3.20,.70,.712,KZ1+.04,KZ1+.052,mat.inox);                       // oven handle
+box(2.665,3.255,.76,.9,KZ1+.02,KZ1+.03,mat.inox);
+for(let k=0;k<5;k++)cyl(2.74+k*.11,KZ1+.04,.018,.82,.84,mat.black).rotation.x=Math.PI/2;
+box(2.68,3.24,.9,.912,KZ0+.04,KZ1,mat.glassblk);                        // ceramic hob
+// wall cabinets (bottom 1.45, top 2.35 – estimated from the photo)
+const UZ1=KZ0+.37,UB=1.45,UT=2.35;
+box(0,2.36,UB,UT,KZ0,UZ1-.018,mat.kplinth); box(3.26,3.88,UB,UT,KZ0,UZ1-.018,mat.kplinth);
+{const n=6,w=2.36/n;for(let k=0;k<n;k++){const x0=k*w,x1=x0+w,g=.0015;box(x0+g,x1-g,UB+g,UT-g,UZ1-.018,UZ1,mat.kfront);
+  const cx=k%2===0?x1-.06:x0+.06;box(cx-.15,cx+.15,UB+.05-.006,UB+.05+.006,UZ1+.012,UZ1+.024,mat.steel);}}
+box(3.261,3.879,UB+.0015,UT-.0015,UZ1-.018,UZ1,mat.kfront); box(3.42,3.72,UB+.044,UB+.056,UZ1+.012,UZ1+.024,mat.steel);
+// open niche with shelves next to the hood
+box(2.36,2.66,UB,UT,KZ0,KZ0+.015,mat.kplinth); box(2.36,2.375,UB,UT,KZ0,UZ1,mat.kplinth); box(2.645,2.66,UB,UT,KZ0,UZ1,mat.kplinth);
+for(const y of[UB,1.75,2.05,UT-.015])box(2.375,2.645,y,y+.015,KZ0,UZ1,mat.kplinth);
+// short cabinet above a slim pull-out hood
+box(2.66,3.26,1.88,UT,KZ0,UZ1-.018,mat.kplinth); box(2.6615,3.2585,1.8815,UT-.0015,UZ1-.018,UZ1,mat.kfront);
+box(2.81,3.11,1.924,1.936,UZ1+.012,UZ1+.024,mat.steel);
+box(2.67,3.25,1.80,1.88,KZ0,UZ1+.02,mat.inox);
+// LED strip under the wall cabinets + warm fill light on the worktop
+for(const [a,b] of [[0,2.36],[3.26,3.88]]) box(a+.02,b-.02,UB-.006,UB,UZ1-.06,UZ1-.03,mat.led,fixed,false);
+for(const x of[.6,1.6,3.55]){const L=new THREE.PointLight(0xffd9a0,.35,1.6,2);L.position.set(x,1.38,2.3);fixed.add(L);}
 // tall units 2 x 2 (1375 x 1245 mm), fronts toward the kitchen
 box(2.64,3.88,0,2.2,3.79,5.16,mat.white);
 box(2.636,2.64,.05,2.15,4.475-.004,4.475+.004,mat.counter);
@@ -385,7 +423,29 @@ function shelf(g,w,d,m){box(-w/2,w/2,0,1.95,-d/2,d/2,m,g);for(const y of[.4,.8,1
 function plant(g,w,d,m){const r=Math.min(w,d)/2*.85,h=Math.max(.6,r*5);cyl(0,0,r*.9,0,.38,mat.pot,g);
   const sh=new THREE.Mesh(new THREE.IcosahedronGeometry(r*1.9,1),m);sh.position.set(0,.38+h*.45,0);sh.scale.set(1,h/(r*3.2),1);sh.castShadow=true;g.add(sh);}
 function lamp(g,w,d,m){const r=Math.min(w,d)/2;cyl(0,0,.012,0,1.55,mat.black,g);cyl(0,0,r*.95,1.5,1.72,m,g);cyl(0,0,r*.8,0,.02,mat.black,g);}
+function landskrona(g,w,d,m,side){const D=Math.min(.89,d),cw=side?Math.min(.95,w*.42):0,z0=-d/2,ar=.12;
+  // legs (15 cm, wood)
+  const lz=side?[z0+.06,z0+D-.06]:[z0+.06,d/2-.06];
+  for(const lx of[-w/2+.06,w/2-.06])for(const z of lz)cyl(lx,z,.022,0,.15,mat.wood,g);
+  if(side){const sx=side>0?w/2-.06:-w/2+.06,ix=side>0?w/2-cw+.06:-w/2+cw-.06;cyl(sx,d/2-.06,.022,0,.15,mat.wood,g);cyl(ix,d/2-.06,.022,0,.15,mat.wood,g);}
+  // frame + back
+  box(-w/2,w/2,.15,.36,z0,z0+D,m,g); box(-w/2,w/2,.36,.78,z0,z0+.17,m,g);
+  if(side){const a=side>0?w/2-cw:-w/2,b=side>0?w/2:-w/2+cw;box(a,b,.15,.36,z0+D,d/2,m,g);}
+  // slim arms
+  const armL=side<0?d:D, armR=side>0?d:D;
+  box(-w/2,-w/2+ar,.36,.6,z0,z0+armL,m,g); box(w/2-ar,w/2,.36,.6,z0,z0+armR,m,g);
+  // seat cushions
+  const xi0=-w/2+ar,xi1=w/2-ar;
+  if(side){const cx=side>0?w/2-cw:-w/2+cw;const r0=side>0?xi0:cx,r1=side>0?cx:xi1;const n=Math.max(1,Math.round((r1-r0)/.6));
+    for(let k=0;k<n;k++){const a=r0+(r1-r0)*k/n,b=r0+(r1-r0)*(k+1)/n;box(a+.01,b-.01,.36,.45,z0+.17,z0+D-.01,m,g);}
+    const c0=side>0?cx:xi0,c1=side>0?xi1:cx;box(c0+.01,c1-.01,.36,.45,z0+.17,d/2-.01,m,g);}
+  else{const n=Math.max(1,Math.round((xi1-xi0)/.6));for(let k=0;k<n;k++){const a=xi0+(xi1-xi0)*k/n,b=xi0+(xi1-xi0)*(k+1)/n;box(a+.01,b-.01,.36,.45,z0+.17,d/2-.01,m,g);}}
+  // back cushions
+  const nb=Math.max(1,Math.round((xi1-xi0)/.62));for(let k=0;k<nb;k++){const a=xi0+(xi1-xi0)*k/nb,b=xi0+(xi1-xi0)*(k+1)/nb;box(a+.01,b-.01,.45,.76,z0+.15,z0+.32,m,g);}}
 const CAT={
+  landskrona:{name:'LANDSKRONA 3-sits',w:2.04,d:.89,m:mat.landsk,b:(g,w,d,m)=>landskrona(g,w,d,m,0)},
+  landskronaR:{name:'LANDSKRONA m. schäslong höger',w:2.40,d:1.58,m:mat.landsk,b:(g,w,d,m)=>landskrona(g,w,d,m,-1)},
+  landskronaL:{name:'LANDSKRONA m. schäslong vänster',w:2.40,d:1.58,m:mat.landsk,b:(g,w,d,m)=>landskrona(g,w,d,m,1)},
   sofa:{name:'Soffa',w:2.2,d:.9,m:mat.sofa,b:sofa},
   armchair:{name:'Fåtölj',w:.8,d:.8,m:mat.textile,b:armchair},
   bed:{name:'Säng',w:1.6,d:2.0,m:mat.duvet,b:bed},
