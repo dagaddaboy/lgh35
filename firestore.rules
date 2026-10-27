@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Byt till era två Google-konton (gemener).
+    function isHome() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in ['din.epost@gmail.com', 'sambo.epost@gmail.com'];
+    }
+
+    // 3D-lägenheten: varianter och möbler
+    match /lgh35_layouts/{layoutId} {
+      allow read, write: if isHome();
+      match /items/{itemId} {
+        allow read, delete: if isHome();
+        allow create, update: if isHome()
+          && request.resource.data.type is string
+          && request.resource.data.x is number
+          && request.resource.data.z is number;
+      }
+    }
+
+    // OBS: Om du använder samma Firebase-projekt som budgetappen –
+    // klistra in blocken ovan bredvid budgetappens befintliga regler
+    // i stället för att ersätta dem.
+  }
+}

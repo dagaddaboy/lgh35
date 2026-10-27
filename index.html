@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lägenhet 35 i 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{color-scheme:light}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px}
+
+/* Layout: full-bleed 3D viewport with a drawing-sheet side panel (bottom sheet on phones) */
+:root{
+  --bg:#eef0ef; --panel:#f8f9f8; --fg:#1d2524; --muted:#5f6b69; --line:#d3d9d7;
+  --accent:#2d6a6e; --accent-ink:#ffffff; --chip:#e3e8e6; --scene:#e6e9e8; --label-bg:rgba(255,255,255,.88); --danger:#b4412f;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a1a; --panel:#1b2222; --fg:#e4eae8; --muted:#94a2a0; --line:#2e3838;
+  --accent:#6fb3b6; --accent-ink:#0e1515; --chip:#253030; --scene:#1a2121; --label-bg:rgba(20,27,27,.86); --danger:#e08a78; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a1a; --panel:#1b2222; --fg:#e4eae8; --muted:#94a2a0; --line:#2e3838;
+  --accent:#6fb3b6; --accent-ink:#0e1515; --chip:#253030; --scene:#1a2121; --label-bg:rgba(20,27,27,.86); --danger:#e08a78; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;overflow:hidden}
+.app{height:100%;display:grid;grid-template-columns:330px 1fr}
+.panel{background:var(--panel);border-right:1px solid var(--line);overflow:auto;
+  padding-block:22px 18px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:20px;
+  display:flex;flex-direction:column;gap:20px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-weight:600;font-size:40px;line-height:1;margin:6px 0 0;text-wrap:balance}
+.stats{display:flex;gap:18px;margin-top:10px;font-family:var(--mono);font-size:13px;color:var(--muted);flex-wrap:wrap}
+.stats b{color:var(--fg);font-weight:500}
+.sec-title{font-family:var(--display);font-weight:500;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.rooms{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.rooms button{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;
+  padding:8px 6px;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px}
+.rooms button:hover{background:var(--chip)}
+.rooms button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.rooms button[aria-pressed="true"]{background:var(--chip);font-weight:600}
+.sw{width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,.15)}
+.num{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.ctrl{display:flex;flex-direction:column;gap:12px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{all:unset;text-align:center;padding:8px 4px;cursor:pointer;font-weight:500;font-size:14px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.tog{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px}
+.tog input{accent-color:var(--accent);width:16px;height:16px}
+.toggles{display:flex;gap:18px;flex-wrap:wrap}
+.note{font-size:12.5px;line-height:1.45;color:var(--muted);margin:0;max-width:60ch}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.view{position:relative;min-width:0;min-height:0;background:var(--scene)}
+.view canvas{display:block;width:100%;height:100%;touch-action:none}
+.labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl{position:absolute;transform:translate(-50%,-50%);background:var(--label-bg);border:1px solid var(--line);
+  padding:3px 7px 2px;border-radius:4px;white-space:nowrap;text-align:center;line-height:1.1}
+.lbl .n{font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:.04em;text-transform:uppercase}
+.lbl .a{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.lbl.ctx .n{font-weight:500;color:var(--muted)}
+.north{position:absolute;right:max(14px,env(safe-area-inset-right,0px));top:14px;font-family:var(--mono);font-size:11px;color:var(--muted);
+  background:var(--label-bg);border:1px solid var(--line);border-radius:4px;padding:4px 8px}
+[hidden]{display:none!important}
+select,input[type=number],input[type=text]{box-sizing:border-box;font:inherit;font-size:14px;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+input[type=number]{font-family:var(--mono);font-size:13px;width:100%}
+.btn{font:inherit;font-size:14px;font-weight:500;color:var(--fg);background:var(--chip);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--danger)}
+.btn.link{background:none;border:0;padding:2px 0;text-decoration:underline;font-size:13px}
+.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.furn-ui{display:flex;flex-direction:column;gap:10px}
+.row2{display:flex;gap:8px;align-items:center}
+.row2>select,.row2>input[type=text]{flex:1}
+.selcard{border:1px solid var(--line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:9px;background:var(--bg)}
+.selcard strong{font-family:var(--display);font-weight:600;font-size:17px;letter-spacing:.03em;text-transform:uppercase}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid2 label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
+.btnrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+input[type=color]{width:38px;height:33px;padding:2px;border:1px solid var(--line);border-radius:6px;background:var(--panel);cursor:pointer}
+.status{font-size:12.5px;color:var(--muted);min-height:1em}.status.err{color:var(--danger)}
+.ro .edit-only{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);font-size:13px}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:1fr auto}
+  .view{order:1}
+  .panel{order:2;max-height:44vh;border-right:0;border-top:1px solid var(--line);
+    padding-block:14px 14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));gap:16px}
+  h1{font-size:30px}
+  .lbl .a{display:none}
+  .lbl .n{font-size:12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel" aria-label="Kontroller">
+    <header>
+      <div class="eyebrow">Planritning → 3D · LGH 35</div>
+      <h1>Lägenhet 35</h1>
+      <div class="stats"><span><b>79,4</b> m² BOA</span><span><b>3</b> rok</span><span><b>+11</b> m² balkong</span></div>
+    </header>
+
+    <section class="ctrl" aria-label="Visning">
+      <div class="seg" role="group" aria-label="Vy">
+        <button id="v3d" aria-pressed="true">3D</button>
+        <button id="vplan" aria-pressed="false">Ovanifrån</button>
+        <button id="vrot" aria-pressed="false">Snurra</button>
+      </div>
+      <div>
+        <div class="row"><label for="wallh" class="sec-title" style="margin:0">Vägghöjd</label><span class="num" id="wallhv">2,70 m</span></div>
+        <input id="wallh" type="range" min="0.3" max="2.7" step="0.05" value="2.7">
+      </div>
+      <div class="toggles">
+        <label class="tog"><input id="tFurn" type="checkbox" checked> Möbler</label>
+        <label class="tog"><input id="tLbl" type="checkbox" checked> Rumsnamn</label>
+      </div>
+    </section>
+
+    <section class="furn-ui" id="furnSec" aria-label="Möblering">
+      <h2 class="sec-title" style="margin:0">Möblering · delad</h2>
+      <div class="row2"><button id="loginBtn" class="btn primary" type="button" hidden>Logga in med Google</button><span id="who" class="hint" hidden>Inloggad som <span id="whoName"></span> · <button id="logoutBtn" class="btn link" type="button">Logga ut</button></span></div>
+      <p class="hint" id="fOff">Ansluter…</p>
+      <div class="furn-ui" id="fOn" hidden>
+        <button id="seedBtn" class="btn primary" type="button" hidden style="align-self:flex-start">Lägg in startmöbleringen</button>
+        <div class="row2"><label for="layoutSel" class="sr">Variant</label><select id="layoutSel"></select><button id="newLayoutBtn" class="btn edit-only" type="button">Ny variant</button></div>
+        <form id="newLayoutForm" class="row2" hidden><label for="newLayoutName" class="sr">Namn på variant</label><input id="newLayoutName" type="text" placeholder="t.ex. Nytt vardagsrum" maxlength="40" required><button class="btn primary">Skapa</button><button type="button" id="newLayoutCancel" class="btn">Avbryt</button></form>
+        <div class="row2 edit-only"><label for="addType" class="sr">Möbeltyp</label><select id="addType"></select><button id="addBtn" class="btn primary" type="button">Lägg till</button></div>
+        <div id="selCard" class="selcard" hidden>
+          <div class="row"><strong id="selName"></strong><span class="num" id="selPos"></span></div>
+          <div class="grid2 edit-only"><label>Bredd (mm)<input id="selW" type="number" step="10" min="100" max="6000"></label><label>Djup (mm)<input id="selD" type="number" step="10" min="100" max="6000"></label></div>
+          <div class="btnrow edit-only">
+            <button id="rotL" class="btn" type="button" aria-label="Vrid 15 grader">↺ 15°</button>
+            <button id="rotR" class="btn" type="button" aria-label="Vrid 90 grader">↻ 90°</button>
+            <input id="selColor" type="color" aria-label="Färg">
+            <button id="dupBtn" class="btn" type="button">Kopiera</button>
+            <button id="delBtn" class="btn danger" type="button">Ta bort</button>
+          </div>
+        </div>
+        <p class="hint" id="fHint">Klicka på en möbel för att välja den och dra för att flytta. R vrider 90°, piltangenter flyttar 5 cm, Delete tar bort.</p>
+        <div class="row"><span class="status" id="fStatus" role="status"></span><button id="undoBtn" class="btn link" type="button" hidden>Ångra</button></div>
+        <button id="delLayoutBtn" class="btn link danger edit-only" type="button" style="align-self:flex-start">Ta bort den här varianten</button>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="sec-title">Rum – klicka för att gå in</h2>
+      <ul class="rooms" id="rooms"></ul>
+      <p class="hint" style="margin-top:8px">Dra för att rotera, scrolla/nypa för att zooma, högerklick eller två fingrar för att flytta.</p>
+    </section>
+
+    <p class="note">Geometrin är uppmätt från planritningen, skalad så att bostadsytan blir 79,4 m² och kontrollerad mot robotdammsugarens karta (proportionerna stämmer inom några procent). Köket följer den uppmätta IKEA-ritningen (3160 × 3880 mm). Rumsnamnen följer robotens karta. Räkna med ±10 cm på enskilda mått. Rumsytor är ungefärliga golvytor, takhöjd 2,70 m (uppmätt i köket). Möbleringen sparas i Firebase och delas mellan de konton som finns i Firestore-reglerna.</p>
+  </aside>
+
+  <main class="view" id="view">
+    <div class="loading" id="loading">Laddar 3D-modell…</div>
+    <div class="labels" id="labels"></div>
+  </main>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+if(!window.THREE){document.getElementById('loading').textContent='Kunde inte ladda 3D-biblioteket.';return;}
+const view=document.getElementById('view');
+const H=2.7, CX=4.6, CZ=4.9;
+
+// ---------- renderer / scene ----------
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled=true;
+renderer.outputEncoding=THREE.sRGBEncoding;
+view.prepend(renderer.domElement);
+document.getElementById('loading').remove();
+
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(45,1,0.05,200);
+const controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true; controls.dampingFactor=0.08; controls.maxPolarAngle=Math.PI*0.495; controls.minDistance=0.5; controls.maxDistance=45;
+
+scene.add(new THREE.HemisphereLight(0xffffff,0xb9b2a6,0.75));
+const sun=new THREE.DirectionalLight(0xffffff,0.75);
+sun.position.set(-7,14,9); sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-10,right:10,top:10,bottom:-10,near:1,far:40});
+sun.shadow.bias=-0.0006; sun.shadow.normalBias=0.02;
+scene.add(sun);
+const fill=new THREE.DirectionalLight(0xffffff,0.25); fill.position.set(8,6,-6); scene.add(fill);
+
+const root=new THREE.Group(); root.position.set(-CX,0,-CZ); scene.add(root);
+const walls=new THREE.Group(), furn=new THREE.Group(), fixed=new THREE.Group(), ctx=new THREE.Group();
+root.add(walls,furn,fixed,ctx);
+
+// clipping plane = wall-height cutaway
+const clip=new THREE.Plane(new THREE.Vector3(0,-1,0),H+0.01);
+const C=[clip];
+function M(color,o={}){return new THREE.MeshStandardMaterial(Object.assign({color,roughness:.85,metalness:0,clippingPlanes:C,clipShadows:true},o));}
+const mat={
+  wall:M(0xf3f2ee), poche:new THREE.MeshBasicMaterial({color:0x2b3131,side:THREE.BackSide,clippingPlanes:C}),
+  oak:M(0xc9a27a,{roughness:.7}), tile:M(0xc7cbcc,{roughness:.6}), slab:M(0x9aa09f), deck:M(0x8a7a66,{roughness:.9}),
+  white:M(0xf7f7f5,{roughness:.5}), black:M(0x1f2222,{roughness:.4}), steel:M(0xb8bcbd,{roughness:.3,metalness:.6}),
+  ceramic:M(0xffffff,{roughness:.25}), counter:M(0x3a3d3d,{roughness:.45}), wood:M(0x9b7350,{roughness:.6}), darkwood:M(0x5d4636),
+  sofa:M(0x6f8a86), textile:M(0x8b9db0), linen:M(0xece9e2), duvet:M(0xb6c4c9), rug:M(0xb9b0a1,{roughness:1}), rug2:M(0x7f8f88,{roughness:1}),
+  frame:M(0xe9ebea,{roughness:.4}), glass:new THREE.MeshPhysicalMaterial({color:0xbfe0ea,transparent:true,opacity:.28,roughness:.05,clippingPlanes:C,depthWrite:false}),
+  frost:new THREE.MeshPhysicalMaterial({color:0xe8eef0,transparent:true,opacity:.7,roughness:.6,clippingPlanes:C}),
+  leaf:M(0xfafaf8,{roughness:.5}), plant:M(0x4f7a4a), pot:M(0xc9c4ba), ctx:M(0xd2d6d5), ctx2:M(0xbfc5c3), rail:M(0x4a5050,{roughness:.4,metalness:.4}),
+  screen:M(0x111414,{roughness:.2}), cushion:M(0x5d7370), mustard:M(0xc29a4b)
+};
+
+function box(x0,x1,y0,y1,z0,z1,m,parent=fixed,cast=true){
+  const g=new THREE.BoxGeometry(Math.abs(x1-x0),Math.abs(y1-y0),Math.abs(z1-z0));
+  const me=new THREE.Mesh(g,m); me.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);
+  me.castShadow=cast; me.receiveShadow=true; parent.add(me); return me;}
+function cyl(x,z,r,y0,y1,m,parent=fixed,seg=24){const me=new THREE.Mesh(new THREE.CylinderGeometry(r,r,y1-y0,seg),m);
+  me.position.set(x,(y0+y1)/2,z); me.castShadow=true; me.receiveShadow=true; parent.add(me); return me;}
+function wallBox(x0,x1,y0,y1,z0,z1){
+  const m=box(x0,x1,y0,y1,z0,z1,mat.wall,walls);
+  const b=new THREE.Mesh(m.geometry,mat.poche); b.position.copy(m.position); walls.add(b);}
+
+// ---------- walls with openings ----------
+// axis 'x': wall runs along x (from→to), thickness spans z t0..t1. axis 'z': runs along z, thickness spans x t0..t1.
+function wallRun(axis,from,to,t0,t1,ops=[]){
+  ops=ops.slice().sort((p,q)=>p.a-q.a); let cur=from;
+  const seg=(a,b,y0,y1)=>{ if(b-a<1e-3||y1-y0<1e-3)return; axis==='x'?wallBox(a,b,y0,y1,t0,t1):wallBox(t0,t1,y0,y1,a,b);};
+  for(const o of ops){ const y0=o.y0||0, y1=o.y1||2.1;
+    seg(cur,o.a,0,H); seg(o.a,o.b,0,y0); seg(o.a,o.b,y1,H); cur=o.b; opening(axis,o,t0,t1,y0,y1);}
+  seg(cur,to,0,H);}
+// place a box given along/across coords
+function ab(axis,a0,a1,y0,y1,c0,c1,m,parent=walls){return axis==='x'?box(a0,a1,y0,y1,c0,c1,m,parent):box(c0,c1,y0,y1,a0,a1,m,parent);}
+function opening(axis,o,t0,t1,y0,y1){
+  const mid=(t0+t1)/2, f=0.05;
+  if(o.type==='win'||o.type==='french'){
+    // frame
+    ab(axis,o.a,o.b,y0,y0+f,mid-0.04,mid+0.04,mat.frame); ab(axis,o.a,o.b,y1-f,y1,mid-0.04,mid+0.04,mat.frame);
+    ab(axis,o.a,o.a+f,y0,y1,mid-0.04,mid+0.04,mat.frame); ab(axis,o.b-f,o.b,y0,y1,mid-0.04,mid+0.04,mat.frame);
+    if(o.mull) ab(axis,(o.a+o.b)/2-0.03,(o.a+o.b)/2+0.03,y0,y1,mid-0.04,mid+0.04,mat.frame);
+    const g=ab(axis,o.a+f,o.b-f,y0+f,y1-f,mid-0.01,mid+0.01,o.frost?mat.frost:mat.glass); g.castShadow=false;
+    if(y0>0.2) ab(axis,o.a-0.03,o.b+0.03,y0-0.02,y0,t0-0.03,t1+0.03,mat.white); // sill
+  }
+  if(o.type==='door'||o.type==='glassdoor'){
+    const w=o.b-o.a, hx=o.hinge==='b'?o.b:o.a, dir=o.hinge==='b'?-1:1;
+    const face=o.side>0?t1:t0, ang=(o.open??80)*Math.PI/180;
+    // casing
+    ab(axis,o.a-0.05,o.a,0,y1+0.05,t0-0.01,t1+0.01,mat.frame); ab(axis,o.b,o.b+0.05,0,y1+0.05,t0-0.01,t1+0.01,mat.frame);
+    ab(axis,o.a-0.05,o.b+0.05,y1,y1+0.05,t0-0.01,t1+0.01,mat.frame);
+    // leaf on a pivot at the hinge
+    const piv=new THREE.Group();
+    if(axis==='x') piv.position.set(hx,0,face); else piv.position.set(face,0,hx);
+    walls.add(piv);
+    const lw=w-0.02, th=0.04, lm=o.type==='glassdoor'?mat.glass:mat.leaf;
+    const leaf=new THREE.Mesh(new THREE.BoxGeometry(lw,y1-0.01,th),lm);
+    leaf.castShadow=o.type!=='glassdoor'; leaf.position.set(dir*lw/2,(y1-0.01)/2,o.side*th/2);
+    const lg=new THREE.Group(); lg.add(leaf);
+    if(o.type==='glassdoor'){ // frame around the glass
+      const fr=(x0,x1,ya,yb)=>{const b=new THREE.Mesh(new THREE.BoxGeometry(Math.abs(x1-x0),yb-ya,th+0.01),mat.frame);b.position.set(dir*(x0+x1)/2,(ya+yb)/2,o.side*th/2);lg.add(b);};
+      fr(0,0.07,0,y1);fr(lw-0.07,lw,0,y1);fr(0,lw,0,0.1);fr(0,lw,y1-0.08,y1-0.01);
+    } else { const hd=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.02,0.06),mat.steel); hd.position.set(dir*(lw-0.08),1.0,o.side*(th+0.03)); lg.add(hd);}
+    // rotate: base frame for axis x = leaf along +x*dir in wall plane; swing toward side
+    let base=axis==='x'?0:-Math.PI/2; // for 'z', local x maps to +z
+    lg.rotation.y=base + (-o.side*dir)*ang*(axis==='x'?1:-1);
+    piv.add(lg);
+  }
+}
+
+// exterior & party walls (thick), interior walls 0.1 m
+wallRun('x',-0.3,5.06,-0.25,0);                                         // party wall to neighbour (north)
+wallBox(5.06,5.72,0,H,-0.25,1.92);                                        // installation shaft
+wallRun('x',5.72,7.8,0.59,0.84,[{a:6.0,b:6.9,type:'door',hinge:'a',side:-1,open:70}]); // entrance
+wallRun('z',0.59,3.78,7.55,7.8);                                          // hall / lift shaft
+wallRun('x',7.55,10.13,3.53,3.78);                                        // bedroom 2 / lift shaft
+wallRun('z',3.53,10.27,9.78,10.13,[{a:4.95,b:6.35,type:'win',y0:.8,y1:2.15,mull:1},{a:7.7,b:9.15,type:'win',y0:.8,y1:2.15,mull:1}]);
+wallRun('x',1.26,10.13,10.02,10.27);                                      // party wall (south)
+wallRun('z',5.16,10.02,1.26,1.56,[{a:5.49,b:6.34,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:55},{a:6.45,b:8.6,type:'win',y0:.45,y1:2.15,mull:1}]);
+wallRun('x',-0.3,1.26,5.16,5.46);                                        // kitchen south (exterior, toward balcony)
+wallRun('z',2.0,2.66,3.88,3.98);                                          // stub kitchen / smyg (IKEA plan)
+wallRun('z',-0.25,5.46,-0.3,0,[{a:1.0,b:1.85,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:30},{a:2.63,b:3.5,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:30},{a:4.5,b:5.06,type:'win',y0:.9,y1:2.1}]);
+wallRun('x',0,5.06,1.9,2.0,[{a:4.13,b:4.91,type:'door',hinge:'b',side:1,open:85}]); // bath/WC – kitchen
+wallRun('z',0,1.9,3.16,3.26,[{a:.7,b:1.5,type:'open'}]);                 // bath – WC (sliding door)
+box(3.13,3.16,0,2.05,1.45,2.0-0.0+0.0,mat.leaf,walls);                    // slid-open door panel
+wallRun('x',5.72,7.55,3.02,3.12,[{a:6.0,b:6.75,type:'door',hinge:'a',side:-1,open:80}]); // walk-in closet
+wallRun('x',5.67,7.55,4.51,4.61);
+wallRun('z',3.78,4.51,7.55,7.65);
+wallRun('z',3.02,10.02,5.67,5.77,[{a:4.65,b:5.45,type:'door',hinge:'a',side:1,open:85},{a:6.85,b:7.65,type:'door',hinge:'a',side:1,open:85}]);
+wallRun('x',5.77,9.78,6.45,6.62);
+
+// French balcony rail
+box(-0.95,-0.3,0,1.8,-0.27,-0.23,mat.frost,ctx); // balcony divider to neighbour
+
+// ---------- floors ----------
+box(-0.3,10.13,-0.22,-0.0,-0.25,10.27,mat.slab,ctx,false);
+const rooms=[
+ {id:'vard',name:'Vardagsrummet',r:[[1.56,5.67,5.16,10.02]],floor:'oak',lab:[3.6,6.4],eye:[5.3,5.55],look:[1.9,9.7],col:'#c9a27a'},
+ {id:'kok',name:'Köket',r:[[0,3.88,2.0,5.16]],floor:'oak',lab:[1.9,2.95],eye:[0.45,4.95],look:[3.6,2.3],col:'#d8bb92'},
+ {id:'smyg',name:'Smyg',r:[[3.88,5.67,2.0,5.16]],floor:'oak',lab:[4.9,3.3],eye:[4.6,5.1],look:[6.6,1.2],col:'#e4a98f'},
+ {id:'sov1',name:'Sovrum',r:[[5.77,9.78,6.62,10.02]],floor:'oak',lab:[8.0,9.35],eye:[6.1,6.95],look:[9.6,9.8],col:'#b08a63'},
+ {id:'sov2',name:'Rosas rum',r:[[5.77,9.78,4.61,6.45],[7.8,9.78,3.78,4.61]],floor:'oak',lab:[7.1,5.4],eye:[6.0,4.85],look:[9.6,5.9],col:'#bf9b72'},
+ {id:'bad',name:'Badrum',r:[[0,3.16,0,1.9]],floor:'tile',lab:[1.2,1.25],eye:[2.95,1.75],look:[0.2,0.2],col:'#c7cbcc'},
+ {id:'wc',name:'WC',r:[[3.26,5.06,0,1.9]],floor:'tile',lab:[4.4,1.2],eye:[4.85,1.75],look:[3.35,0.2],col:'#b5babb'},
+ {id:'hall',name:'Hall',r:[[5.72,7.55,0.84,3.02]],floor:'oak',lab:[6.5,1.7],eye:[6.4,2.95],look:[6.5,0.85],col:'#e0c8a6'},
+ {id:'klk',name:'Klädkammare',r:[[5.77,7.55,3.12,4.51]],floor:'oak',lab:[6.75,3.75],eye:[6.35,3.2],look:[7.4,4.45],col:'#a8835e'},
+ {id:'balk',name:'Balkong',r:[[-0.93,1.26,5.46,9.06],[-0.93,-0.3,-0.25,5.46]],floor:'deck',lab:[0.15,7.4],eye:[-0.6,8.9],look:[1.0,5.8],col:'#8a7a66',outside:1}
+];
+for(const rm of rooms){ rm.area=rm.r.reduce((s,q)=>s+(q[1]-q[0])*(q[3]-q[2]),0);
+  for(const q of rm.r){ if(rm.outside) box(q[0],q[1],-0.15,-0.05,q[2],q[3],mat.deck,ctx,false);
+    else box(q[0],q[1],0,0.012,q[2],q[3],mat[rm.floor],ctx,false);}}
+// balcony railing
+box(-0.95,-0.91,-0.05,1.1,-0.25,9.08,mat.glass,ctx,false); box(-0.97,-0.89,1.06,1.1,-0.25,9.08,mat.rail,ctx);
+box(-0.95,1.26,-0.05,1.1,9.04,9.08,mat.glass,ctx,false); box(-0.97,1.26,1.06,1.1,9.02,9.1,mat.rail,ctx);
+// context: stairwell + lift shaft
+box(5.72,7.8,-0.2,0.0,-1.9,0.59,mat.ctx,ctx,false); box(7.8,10.13,-0.2,0.6,-0.6,3.53,mat.ctx2,ctx);
+const ctxLabels=[{name:'Trapphus',p:[6.7,-0.8]},{name:'Hisschakt',p:[9.0,1.5]}];
+
+function cabinet(x0,x1,y0,y1,z0,z1,n){box(x0,x1,y0,y1,z0,z1,mat.white);for(let k=1;k<n;k++){const x=x0+(x1-x0)*k/n;box(x-.004,x+.004,y0+.02,y1-.02,z1,z1+.004,mat.counter);}}
+// Kitchen — from the measured IKEA plan (room 3160 x 3880 mm)
+box(0.02,3.86,0,.1,2.05,2.55,mat.counter);                // plinth
+box(0.0,3.88,.1,.86,2.0,2.62,mat.white);
+for(const x of[0.6,1.1,1.85,2.06,2.66,3.27]) box(x-.004,x+.004,.12,.84,2.62,2.624,mat.counter); // cabinet joints
+box(0.0,3.88,.86,.9,2.0,2.64,mat.counter);                // worktop
+box(1.15,1.46,.88,.905,2.12,2.5,mat.steel); box(1.5,1.81,.88,.905,2.12,2.5,mat.steel); // double sink
+cyl(1.48,2.08,.015,.9,1.15,mat.steel);
+box(2.69,3.24,.9,.905,2.06,2.58,mat.black);               // hob
+box(2.69,3.24,.15,.75,2.6,2.625,mat.black);               // oven
+cabinet(0.0,2.7,1.45,2.2,2.0,2.37,4); cabinet(3.23,3.88,1.45,2.2,2.0,2.37,1);
+box(2.72,3.21,1.65,2.2,2.0,2.38,mat.steel);               // hood
+box(0.0,3.88,1.45,1.46,2.0,2.37,mat.counter);
+// tall units 2 x 2 (1375 x 1245 mm), fronts toward the kitchen
+box(2.64,3.88,0,2.2,3.79,5.16,mat.white);
+box(2.636,2.64,.05,2.15,4.475-.004,4.475+.004,mat.counter);
+for(const z of[4.1,4.85]) box(2.6,2.64,.9,1.5,z-.01,z+.01,mat.steel);
+box(2.636,2.64,1.75,1.76,3.82,4.47,mat.counter);
+// radiator under kitchen south wall
+box(0.05,0.42,.15,.75,5.06,5.14,mat.white);
+// Bath (fixed)
+box(.04,1.5,0,.55,.04,.76,mat.ceramic); box(.14,1.4,.3,.56,.12,.68,mat.tile);
+box(1.48,1.5,.55,2.0,.04,.7,mat.glass,fixed,false);
+box(.4,.95,.78,.86,1.48,1.9,mat.ceramic); box(.4,.95,.4,.78,1.6,1.9,mat.wood); box(.42,.93,1.05,1.75,1.96,1.98,mat.steel);
+box(1.95,2.55,0,.85,.04,.64,mat.ceramic); box(2.55,3.12,0,.85,.04,.64,mat.ceramic);
+cyl(2.25,.645,.17,.3,.6,mat.black).rotation.x=Math.PI/2; cyl(2.83,.645,.17,.3,.6,mat.counter).rotation.x=Math.PI/2;
+// WC
+box(3.27,3.45,0,.9,.38,.82,mat.ceramic); box(3.45,3.95,0,.42,.43,.77,mat.ceramic);
+box(4.15,4.65,.78,.86,.0,.45,mat.ceramic); box(4.15,4.65,1.05,1.75,.0,.02,mat.steel);
+// Built-in wardrobes (sovrum), hall cabinet + hooks, walk-in closet shelving
+box(5.77,6.37,0,2.2,8.2,10.0,mat.white); for(const z of[8.8,9.4]) box(6.37,6.38,.05,2.15,z-.004,z+.004,mat.counter);
+for(let z=1.25;z<2.2;z+=.2) box(7.47,7.55,1.65,1.69,z,z+.03,mat.steel);
+box(6.92,7.5,0,2.3,2.48,3.0,mat.white);
+box(5.77,6.22,0,2.0,3.15,4.48,mat.white); box(6.22,7.52,0,2.0,4.05,4.48,mat.white);
+
+// ---------- movable furniture: builders (local frame: width along x, depth along z, front faces +z) ----------
+const matCache={};
+function colMat(hex,fb){if(typeof hex!=='string'||!/^#[0-9a-f]{6}$/i.test(hex))return fb;return matCache[hex]||(matCache[hex]=M(new THREE.Color(hex)));}
+function legs(g,w,d,h,m,inset=.06,s=.025){for(const sx of[-1,1])for(const sz of[-1,1])box(sx*(w/2-inset)-s,sx*(w/2-inset)+s,0,h,sz*(d/2-inset)-s,sz*(d/2-inset)+s,m,g);}
+function sofa(g,w,d,m){box(-w/2,w/2,.1,.42,-d/2,d/2,m,g);box(-w/2,w/2,.42,.82,-d/2,-d/2+.2,m,g);
+  box(-w/2,-w/2+.18,.42,.62,-d/2,d/2,m,g);box(w/2-.18,w/2,.42,.62,-d/2,d/2,m,g);
+  const n=Math.max(1,Math.round((w-.36)/.62));for(let k=0;k<n;k++){const sp=(w-.36)/n,x0=-w/2+.18+k*sp;box(x0+.02,x0+sp-.02,.42,.52,-d/2+.2,d/2-.02,mat.cushion,g);}
+  legs(g,w,d,.1,mat.darkwood,.06,.02);}
+function armchair(g,w,d,m){box(-w/2,w/2,.1,.42,-d/2,d/2,m,g);box(-w/2,w/2,.42,.85,-d/2,-d/2+.18,m,g);
+  box(-w/2,-w/2+.1,.42,.6,-d/2,d/2,m,g);box(w/2-.1,w/2,.42,.6,-d/2,d/2,m,g);legs(g,w,d,.1,mat.darkwood,.05,.02);}
+function chair(g,w,d,m){const hw=w/2-.005,hd=d/2-.005;box(-hw,hw,.43,.47,-hd,hd,m,g);box(-hw,hw,.47,.85,-hd,-hd+.04,m,g);legs(g,w,d,.43,m,.04,.02);}
+function table(g,w,d,h,m){box(-w/2,w/2,h-.04,h,-d/2,d/2,m,g);legs(g,w,d,h-.04,m);}
+function bed(g,w,L,duv){box(-w/2,w/2,.05,.3,-L/2,L/2,mat.wood,g);box(-w/2+.02,w/2-.02,.3,.52,-L/2+.02,L/2-.02,mat.linen,g);
+  box(-w/2-.02,w/2+.02,0,1.0,-L/2-.06,-L/2,mat.textile,g);
+  const np=w>1.3?2:1;for(let k=0;k<np;k++){const pw=w/np-.12,x0=-w/2+.06+k*(w/np);box(x0,x0+pw,.52,.64,-L/2+.06,-L/2+.46,mat.ceramic,g);}
+  box(-w/2-.01,w/2+.01,.5,.58,-L/2+.6,L/2+.01,duv,g);}
+function chest(g,w,d,h,m,tall){box(-w/2,w/2,0,h,-d/2,d/2,m,g);
+  if(tall){const n=Math.max(1,Math.round(w/.5));for(let k=1;k<n;k++){const x=-w/2+w*k/n;box(x-.004,x+.004,.05,h-.05,d/2,d/2+.004,mat.counter,g);}}
+  else for(let k=1;k<4;k++){const y=h*k/4;box(-w/2+.02,w/2-.02,y-.004,y+.004,d/2,d/2+.004,mat.counter,g);}}
+function tvbench(g,w,d,m){box(-w/2,w/2,0,.45,-d/2,d/2,m,g);const tw=Math.max(.4,Math.min(w-.2,1.3));
+  box(-tw/2,tw/2,.62,.62+tw*.57,-d/2+.06,-d/2+.1,mat.screen,g);box(-.05,.05,.45,.62,-d/2+.04,-d/2+.12,mat.black,g);}
+function shelf(g,w,d,m){box(-w/2,w/2,0,1.95,-d/2,d/2,m,g);for(const y of[.4,.8,1.2,1.6])box(-w/2+.02,w/2-.02,y,y+.02,d/2-.01,d/2+.004,mat.darkwood,g);}
+function plant(g,w,d,m){const r=Math.min(w,d)/2*.85,h=Math.max(.6,r*5);cyl(0,0,r*.9,0,.38,mat.pot,g);
+  const sh=new THREE.Mesh(new THREE.IcosahedronGeometry(r*1.9,1),m);sh.position.set(0,.38+h*.45,0);sh.scale.set(1,h/(r*3.2),1);sh.castShadow=true;g.add(sh);}
+function lamp(g,w,d,m){const r=Math.min(w,d)/2;cyl(0,0,.012,0,1.55,mat.black,g);cyl(0,0,r*.95,1.5,1.72,m,g);cyl(0,0,r*.8,0,.02,mat.black,g);}
+const CAT={
+  sofa:{name:'Soffa',w:2.2,d:.9,m:mat.sofa,b:sofa},
+  armchair:{name:'Fåtölj',w:.8,d:.8,m:mat.textile,b:armchair},
+  bed:{name:'Säng',w:1.6,d:2.0,m:mat.duvet,b:bed},
+  nightstand:{name:'Sängbord',w:.4,d:.4,m:mat.white,b:(g,w,d,m)=>box(-w/2,w/2,0,.5,-d/2,d/2,m,g)},
+  dresser:{name:'Byrå',w:.8,d:.5,m:mat.white,b:(g,w,d,m)=>chest(g,w,d,.8,m,false)},
+  wardrobe:{name:'Garderob',w:1.0,d:.6,m:mat.white,b:(g,w,d,m)=>chest(g,w,d,2.1,m,true)},
+  table:{name:'Matbord',w:.9,d:1.6,m:mat.wood,b:(g,w,d,m)=>table(g,w,d,.74,m)},
+  coffee:{name:'Soffbord',w:1.1,d:.6,m:mat.darkwood,b:(g,w,d,m)=>table(g,w,d,.42,m)},
+  desk:{name:'Skrivbord',w:1.4,d:.6,m:mat.white,b:(g,w,d,m)=>table(g,w,d,.74,m)},
+  chair:{name:'Stol',w:.45,d:.45,m:mat.wood,b:chair},
+  tvbench:{name:'TV-bänk',w:1.7,d:.4,m:mat.darkwood,b:tvbench},
+  shelf:{name:'Bokhylla',w:1.8,d:.37,m:mat.white,b:shelf},
+  bench:{name:'Bänk',w:1.1,d:.35,m:mat.darkwood,b:(g,w,d,m)=>box(-w/2,w/2,0,.45,-d/2,d/2,m,g)},
+  rug:{name:'Matta',w:2.0,d:1.4,m:mat.rug,b:(g,w,d,m)=>box(-w/2,w/2,.012,.022,-d/2,d/2,m,g,false)},
+  plant:{name:'Växt',w:.4,d:.4,m:mat.plant,b:plant},
+  lamp:{name:'Golvlampa',w:.35,d:.35,m:mat.linen,b:lamp}
+};
+
+walls.traverse(o=>{o.receiveShadow=true;});
+
+// ---------- labels ----------
+const lblWrap=document.getElementById('labels');
+const labelItems=[];
+function addLabel(name,area,x,z,cls=''){const el=document.createElement('div');el.className='lbl '+cls;
+  el.innerHTML='<div class="n"></div>'+(area?'<div class="a"></div>':'');el.querySelector('.n').textContent=name;
+  if(area)el.querySelector('.a').textContent=area;lblWrap.appendChild(el);labelItems.push({el,v:new THREE.Vector3(x-CX,.05,z-CZ)});}
+const fmt=n=>n.toFixed(1).replace('.',',');
+for(const rm of rooms) addLabel(rm.name,'≈ '+fmt(rm.area)+' m²',rm.lab[0],rm.lab[1]);
+for(const c of ctxLabels) addLabel(c.name,'',c.p[0],c.p[1],'ctx');
+
+// ---------- room list ----------
+const ul=document.getElementById('rooms');
+for(const rm of rooms){const li=document.createElement('li');const b=document.createElement('button');b.setAttribute('aria-pressed','false');b.dataset.id=rm.id;
+  b.innerHTML='<span class="sw"></span><span class="nm"></span><span class="num"></span>';
+  b.querySelector('.sw').style.background=rm.col;b.querySelector('.nm').textContent=rm.name;b.querySelector('.num').textContent=fmt(rm.area)+' m²';
+  b.addEventListener('click',()=>enterRoom(rm,b));li.appendChild(b);ul.appendChild(li);}
+
+// ---------- camera animation ----------
+let anim=null;
+function flyTo(pos,target,ms=900,fov=45){anim={p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:target,f0:camera.fov,f1:fov,start:performance.now(),ms};}
+const W=(x,y,z)=>new THREE.Vector3(x-CX,y,z-CZ);
+const presets={
+  '3d':()=>flyTo(new THREE.Vector3(7.5,11.5,11.5),new THREE.Vector3(0,0,0.3)),
+  'plan':()=>flyTo(new THREE.Vector3(0,16.5,0.9),new THREE.Vector3(0,0,0.3))};
+function setSeg(id){for(const b of document.querySelectorAll('.seg button'))b.setAttribute('aria-pressed',String(b.id===id));}
+function clearRooms(){for(const b of ul.querySelectorAll('button'))b.setAttribute('aria-pressed','false');}
+document.getElementById('v3d').onclick=()=>{setLbl(true);setSeg('v3d');controls.autoRotate=false;clearRooms();presets['3d']();};
+document.getElementById('vplan').onclick=()=>{setLbl(true);setSeg('vplan');controls.autoRotate=false;clearRooms();presets['plan']();};
+document.getElementById('vrot').onclick=()=>{setSeg('vrot');clearRooms();presets['3d']();controls.autoRotate=true;controls.autoRotateSpeed=1.2;};
+const tL=document.getElementById('tLbl');function setLbl(on){tL.checked=on;lblWrap.hidden=!on;}
+function enterRoom(rm,btn){clearRooms();setLbl(false);btn.setAttribute('aria-pressed','true');setSeg('');controls.autoRotate=false;
+  const e=W(rm.eye[0],1.6,rm.eye[1]), t=W(rm.look[0],1.0,rm.look[1]);
+  const d=t.clone().sub(e).normalize(); flyTo(e,e.clone().add(d.multiplyScalar(0.6)),900,68);}
+
+// ---------- controls ----------
+const wh=document.getElementById('wallh'),whv=document.getElementById('wallhv');
+wh.addEventListener('input',()=>{const v=+wh.value;clip.constant=v>=2.69?H+0.01:v;whv.textContent=v.toFixed(2).replace('.',',')+' m';});
+document.getElementById('tFurn').addEventListener('change',e=>{furn.visible=e.target.checked;if(!furn.visible)select(null);});
+document.getElementById('tLbl').addEventListener('change',e=>{lblWrap.hidden=!e.target.checked;});
+
+
+// ---------- shared furnishing (Firestore) ----------
+const COL='lgh35_layouts';
+const $=id=>document.getElementById(id);
+const itemsMap=new Map();
+let sel=null,dragging=null,downAt=null,canEdit=true,db=null,layoutId=null,layouts=[],unsubItems=null,lastDel=null,nudgeT=null,delArm=null;
+const snap=v=>Math.round(v/0.05)*0.05, r3=v=>Math.round(v*1000)/1000;
+const clampX=v=>Math.min(10.1,Math.max(-0.95,v)), clampZ=v=>Math.min(10.25,Math.max(-0.3,v));
+const fm=v=>v.toFixed(2).replace('.',',');
+const normRot=r=>{r=((r%360)+360)%360;return r>180?r-360:r;};
+const selBox=new THREE.BoxHelper(undefined,0xe0a030); selBox.visible=false; scene.add(selBox);
+function itemPath(id){return COL+'/'+layoutId+'/items/'+id;}
+function place(g,d){g.position.set(+d.x||0,0,+d.z||0);g.rotation.y=(+d.rot||0)*Math.PI/180;}
+function buildItem(id,d){const t=CAT[d.type];if(!t)return null;const g=new THREE.Group();g.userData.itemId=id;
+  const w=Math.min(6,Math.max(.1,+d.w||t.w)),dd=Math.min(6,Math.max(.1,+d.d||t.d));t.b(g,w,dd,colMat(d.color,t.m));place(g,d);furn.add(g);return g;}
+function upsert(id,d){const key=[d.type,d.w,d.d,d.color].join('|');let it=itemsMap.get(id);
+  if(it&&it.key===key){it.d=d;if(!(dragging&&dragging.id===id))place(it.g,d);}
+  else{if(it)furn.remove(it.g);const g=buildItem(id,d);if(!g){itemsMap.delete(id);return;}
+    if(dragging&&dragging.id===id&&it){g.position.copy(it.g.position);}
+    itemsMap.set(id,{d,g,key});}
+  if(sel===id)showSel();}
+function removeItem(id){const it=itemsMap.get(id);if(it)furn.remove(it.g);itemsMap.delete(id);if(sel===id)select(null);}
+function clearItems(){for(const id of[...itemsMap.keys()])removeItem(id);}
+function setStatus(t,err){const el=$('fStatus');el.textContent=t||'';el.classList.toggle('err',!!err);}
+function fail(e){const c=e&&e.code;
+  if(c==='permission-denied'||c==='invalid_argument'){setReadOnly();setStatus('Du har inte behörighet att ändra möbleringen.',true);}
+  else if(c==='quota_exceeded')setStatus('Lagringen är full. Ta bort möbler eller varianter.',true);
+  else if(c==='resource_exhausted'||c==='resource-exhausted')setStatus('För många ändringar på kort tid. Vänta en stund.',true);
+  else if(c==='not-found')setStatus('Möbeln finns inte längre – någon annan har tagit bort den.',true);
+  else setStatus('Kunde inte spara. Kontrollera nätverket och försök igen.',true);}
+function setReadOnly(){canEdit=false;$('furnSec').classList.add('ro');$('fHint').textContent='Du kan titta på möbleringen men inte ändra den.';}
+const pend=new Map(),busy=new Set();
+async function persist(id,patch){if(!db)return;const path=itemPath(id);pend.set(path,{...(pend.get(path)||{}),...patch});if(busy.has(path))return;busy.add(path);setStatus('Sparar…');
+  try{while(pend.has(path)){const p=pend.get(path);pend.delete(path);await db.doc(path).update(p);}setStatus('Sparat');}
+  catch(e){pend.delete(path);fail(e);}finally{busy.delete(path);}}
+function localPatch(id,patch){const it=itemsMap.get(id);if(!it)return;upsert(id,{...it.d,...patch});}
+function select(id){sel=id&&itemsMap.has(id)?id:null;selBox.visible=!!sel;$('selCard').hidden=!sel;if(sel)showSel();}
+function showSel(){const it=itemsMap.get(sel);if(!it)return;const t=CAT[it.d.type]||{name:it.d.type,m:mat.white};
+  selBox.setFromObject(it.g);$('selName').textContent=t.name;
+  $('selPos').textContent=fm(it.g.position.x)+' / '+fm(it.g.position.z)+' m · '+Math.round(+it.d.rot||0)+'°';
+  const wEl=$('selW'),dEl=$('selD');if(document.activeElement!==wEl)wEl.value=Math.round((+it.d.w||t.w)*1000);if(document.activeElement!==dEl)dEl.value=Math.round((+it.d.d||t.d)*1000);
+  $('selColor').value=(typeof it.d.color==='string'&&/^#[0-9a-f]{6}$/i.test(it.d.color))?it.d.color:'#'+t.m.color.getHexString();}
+function rotateSel(delta){if(!sel||!canEdit)return;const it=itemsMap.get(sel);const rot=normRot((+it.d.rot||0)+delta);localPatch(sel,{rot});persist(sel,{rot});}
+async function ensureLayout(){if(layouts.some(l=>l.id===layoutId))return;await db.doc(COL+'/'+layoutId).set({name:layoutId==='nuvarande'?'Nuvarande':layoutId,order:0});}
+async function addItem(type,at,extra){const t=CAT[type];if(!t||!db||!canEdit)return;
+  const p=at||{x:controls.target.x+CX,z:controls.target.z+CZ};
+  const data={type,x:r3(snap(clampX(p.x))),z:r3(snap(clampZ(p.z))),rot:0,w:t.w,d:t.d,...(extra||{})};
+  const ref=db.collection(COL+'/'+layoutId+'/items').doc();upsert(ref.id,data);select(ref.id);setStatus('Sparar…');
+  try{await ensureLayout();await ref.set(data);setStatus('Sparat');}catch(e){removeItem(ref.id);fail(e);}}
+async function deleteSel(){if(!sel||!canEdit)return;const id=sel,it=itemsMap.get(id);lastDel={path:itemPath(id),id,data:{...it.d}};removeItem(id);
+  try{await db.doc(lastDel.path).delete();setStatus('Borttagen');$('undoBtn').hidden=false;}catch(e){upsert(id,lastDel.data);lastDel=null;fail(e);}}
+$('undoBtn').onclick=async()=>{if(!lastDel)return;const L=lastDel;lastDel=null;$('undoBtn').hidden=true;
+  try{await db.doc(L.path).set(L.data);if(L.path===itemPath(L.id)){upsert(L.id,L.data);select(L.id);}setStatus('Återställd');}catch(e){fail(e);}};
+
+// panel controls
+for(const [k,t] of Object.entries(CAT)){const o=document.createElement('option');o.value=k;o.textContent=t.name+' ('+Math.round(t.w*100)+'×'+Math.round(t.d*100)+' cm)';$('addType').appendChild(o);}
+$('addBtn').onclick=()=>addItem($('addType').value);
+$('rotL').onclick=()=>rotateSel(15); $('rotR').onclick=()=>rotateSel(-90);
+$('delBtn').onclick=deleteSel;
+$('dupBtn').onclick=()=>{const it=itemsMap.get(sel);if(!it)return;const d={...it.d};addItem(d.type,{x:it.g.position.x+.3,z:it.g.position.z+.3},{rot:+d.rot||0,w:d.w,d:d.d,...(d.color?{color:d.color}:{})});};
+function sizeChange(){if(!sel||!canEdit)return;const w=Math.min(6000,Math.max(100,+$('selW').value||0))/1000,d=Math.min(6000,Math.max(100,+$('selD').value||0))/1000;
+  const it=itemsMap.get(sel);if(Math.abs(w-(+it.d.w))<1e-4&&Math.abs(d-(+it.d.d))<1e-4)return;localPatch(sel,{w,d});persist(sel,{w,d});}
+$('selW').addEventListener('change',sizeChange);$('selD').addEventListener('change',sizeChange);
+$('selColor').addEventListener('change',e=>{if(!sel||!canEdit)return;const color=e.target.value;localPatch(sel,{color});persist(sel,{color});});
+
+// layouts (variants)
+function renderLayouts(){const s=$('layoutSel');s.textContent='';const list=layouts.length?layouts:[{id:'nuvarande',name:'Nuvarande'}];
+  if(!list.some(l=>l.id===layoutId)&&layoutId)list.push({id:layoutId,name:layoutId});
+  for(const l of list){const o=document.createElement('option');o.value=l.id;o.textContent=(typeof l.name==='string'&&l.name)||l.id;s.appendChild(o);}
+  s.value=layoutId||list[0].id;$('delLayoutBtn').hidden=layouts.length<2;}
+function switchLayout(id){if(id===layoutId&&unsubItems)return;if(unsubItems)unsubItems();clearItems();layoutId=id;try{localStorage.setItem('lgh35-layout',id);}catch(e){}
+  renderLayouts();
+  unsubItems=db.collection(COL+'/'+id+'/items').onSnapshot(sn=>{for(const ch of sn.docChanges()){if(ch.type==='removed')removeItem(ch.doc.id);else upsert(ch.doc.id,ch.doc.data());}
+      $('fHint').hidden=false;if(canEdit)$('fHint').textContent=itemsMap.size?'Klicka på en möbel för att välja den och dra för att flytta. R vrider 90°, piltangenter flyttar 5 cm, Delete tar bort.':'Den här varianten har inga möbler ännu. Välj en möbel ovan och tryck Lägg till.';},
+    e=>setStatus('Möbleringen kunde inte laddas. Ladda om sidan.',true));}
+$('layoutSel').addEventListener('change',e=>{select(null);switchLayout(e.target.value);});
+$('newLayoutBtn').onclick=()=>{$('newLayoutForm').hidden=false;$('newLayoutName').focus();};
+$('newLayoutCancel').onclick=()=>{$('newLayoutForm').hidden=true;};
+$('newLayoutForm').addEventListener('submit',async e=>{e.preventDefault();const name=$('newLayoutName').value.trim();if(!name)return;
+  const nid='v'+Date.now().toString(36);setStatus('Skapar variant…');
+  try{await ensureLayout();await db.doc(COL+'/'+nid).set({name,order:Date.now()});
+    await Promise.all([...itemsMap].map(([iid,it])=>db.doc(COL+'/'+nid+'/items/'+iid).set({...it.d})));
+    $('newLayoutForm').hidden=true;$('newLayoutName').value='';select(null);switchLayout(nid);setStatus('Variant skapad – en kopia av den förra');}catch(err){fail(err);}});
+$('delLayoutBtn').onclick=async()=>{const b=$('delLayoutBtn');
+  if(!delArm){delArm=setTimeout(()=>{delArm=null;b.textContent='Ta bort den här varianten';},4000);b.textContent='Klicka igen för att ta bort varianten';return;}
+  clearTimeout(delArm);delArm=null;b.textContent='Ta bort den här varianten';
+  const gone=layoutId,other=layouts.find(l=>l.id!==gone);if(!other)return;
+  try{await Promise.all([...itemsMap.keys()].map(iid=>db.doc(COL+'/'+gone+'/items/'+iid).delete()));await db.doc(COL+'/'+gone).delete();select(null);switchLayout(other.id);setStatus('Varianten är borttagen');}catch(e){fail(e);}};
+
+// pointer: pick, drag on the floor plane
+const cv=renderer.domElement, ray=new THREE.Raycaster(), ndc=new THREE.Vector2(), floorPl=new THREE.Plane(new THREE.Vector3(0,1,0),0), hitP=new THREE.Vector3();
+function setRay(e){const r=cv.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(ndc,camera);}
+function pickItem(){if(!furn.visible)return null;for(const h of ray.intersectObjects(furn.children,true)){let o=h.object;while(o&&!o.userData.itemId)o=o.parent;if(o)return o.userData.itemId;}return null;}
+function floorPt(){return ray.ray.intersectPlane(floorPl,hitP)?{x:hitP.x+CX,z:hitP.z+CZ}:null;}
+cv.addEventListener('pointerdown',e=>{if(e.button!==0||dragging)return;setRay(e);const id=pickItem();downAt={x:e.clientX,y:e.clientY,hit:!!id};
+  if(!id)return;select(id);if(!canEdit||!db)return;const p=floorPt();if(!p)return;const it=itemsMap.get(id);
+  dragging={id,ox:it.g.position.x-p.x,oz:it.g.position.z-p.z,moved:false,pid:e.pointerId,sx:e.clientX,sy:e.clientY};
+  controls.enabled=false;try{cv.setPointerCapture(e.pointerId);}catch(_){}e.preventDefault();},{capture:true});
+cv.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==dragging.pid)return;
+  if(!dragging.moved&&Math.hypot(e.clientX-dragging.sx,e.clientY-dragging.sy)<4)return;dragging.moved=true;
+  setRay(e);const p=floorPt();if(!p)return;const it=itemsMap.get(dragging.id);if(!it)return;
+  it.g.position.x=snap(clampX(p.x+dragging.ox));it.g.position.z=snap(clampZ(p.z+dragging.oz));showSel();});
+function endDrag(e){if(dragging&&e.pointerId===dragging.pid){const d=dragging;dragging=null;controls.enabled=true;const it=itemsMap.get(d.id);
+    if(d.moved&&it){const x=r3(it.g.position.x),z=r3(it.g.position.z);it.d={...it.d,x,z};persist(d.id,{x,z});}return;}
+  if(downAt&&!downAt.hit&&e.type==='pointerup'&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<4)select(null);downAt=null;}
+cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
+document.addEventListener('keydown',e=>{if(!sel)return;const tg=e.target;if(tg&&(tg.tagName==='INPUT'||tg.tagName==='SELECT'||tg.tagName==='TEXTAREA'))return;
+  if(e.key==='Escape'){select(null);return;}if(!canEdit)return;
+  if(e.key==='r'||e.key==='R'){rotateSel(e.shiftKey?15:-90);e.preventDefault();}
+  else if(e.key==='Delete'||e.key==='Backspace'){deleteSel();e.preventDefault();}
+  else if(e.key.startsWith('Arrow')){const it=itemsMap.get(sel);const dx=e.key==='ArrowLeft'?-.05:e.key==='ArrowRight'?.05:0,dz=e.key==='ArrowUp'?-.05:e.key==='ArrowDown'?.05:0;
+    it.g.position.x=snap(clampX(it.g.position.x+dx));it.g.position.z=snap(clampZ(it.g.position.z+dz));showSel();e.preventDefault();
+    clearTimeout(nudgeT);const id=sel;nudgeT=setTimeout(()=>{const t=itemsMap.get(id);if(!t)return;const x=r3(t.g.position.x),z=r3(t.g.position.z);t.d={...t.d,x,z};persist(id,{x,z});},400);}});
+
+// connect to Firebase (config in firebase-config.js)
+let unsubLayouts=null;
+function stopAll(){if(unsubLayouts){unsubLayouts();unsubLayouts=null;}if(unsubItems){unsubItems();unsubItems=null;}select(null);clearItems();layoutId=null;layouts=[];}
+$('seedBtn').onclick=async()=>{const b=$('seedBtn');b.disabled=true;setStatus('Lägger in…');
+  try{const seed=await (await fetch('seed.json',{cache:'no-store'})).json();const wb=db.batch();
+    for(const L of seed.layouts){wb.set(db.doc(COL+'/'+L.id),{name:L.name,order:L.order||0});for(const [iid,it] of Object.entries(L.items))wb.set(db.doc(COL+'/'+L.id+'/items/'+iid),it);}
+    await wb.commit();setStatus('Startmöbleringen är inlagd');}catch(e){b.disabled=false;fail(e);}};
+(function(){const cfg=window.FIREBASE_CONFIG;
+  if(!window.firebase||!cfg||!cfg.apiKey||/^DIN_/.test(cfg.apiKey)){$('fOff').textContent='Firebase är inte konfigurerat ännu. Fyll i firebase-config.js enligt README.';return;}
+  firebase.initializeApp(cfg);db=firebase.firestore();const auth=firebase.auth();
+  $('loginBtn').onclick=async()=>{const pr=new firebase.auth.GoogleAuthProvider();
+    try{await auth.signInWithPopup(pr);}catch(e){if(e&&(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'))auth.signInWithRedirect(pr);
+      else if(!(e&&e.code==='auth/popup-closed-by-user'))$('fOff').textContent='Inloggningen misslyckades ('+((e&&e.code)||'okänt fel')+').';}};
+  $('logoutBtn').onclick=()=>auth.signOut();
+  auth.onAuthStateChanged(u=>{stopAll();
+    if(!u){$('fOn').hidden=true;$('fOff').hidden=false;$('fOff').textContent='Logga in för att se och ändra möbleringen.';$('loginBtn').hidden=false;$('who').hidden=true;return;}
+    $('loginBtn').hidden=true;$('who').hidden=false;$('whoName').textContent=u.email||u.displayName||'okänt konto';
+    $('fOff').hidden=true;$('fOn').hidden=false;canEdit=true;$('furnSec').classList.remove('ro');setStatus('');
+    let stored=null;try{stored=localStorage.getItem('lgh35-layout');}catch(e){}
+    unsubLayouts=db.collection(COL).onSnapshot(sn=>{layouts=sn.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(+a.order||0)-(+b.order||0));
+        $('seedBtn').hidden=sn.size>0;
+        if(!layoutId){const pick=(stored&&layouts.some(l=>l.id===stored))?stored:(layouts.some(l=>l.id==='nuvarande')?'nuvarande':(layouts[0]?layouts[0].id:'nuvarande'));switchLayout(pick);}
+        else if(layouts.length&&!layouts.some(l=>l.id===layoutId)){select(null);switchLayout(layouts[0].id);}
+        else renderLayouts();},
+      e=>{if(e&&e.code==='permission-denied'){$('fOn').hidden=true;$('fOff').hidden=false;$('fOff').textContent='Kontot '+(u.email||'')+' har inte behörighet. Lägg till adressen i Firestore-reglerna (se README).';}
+        else setStatus('Möbleringen kunde inte laddas. Ladda om sidan.',true);});});
+})();
+
+// ---------- theme-aware background ----------
+function applyBg(){const c=getComputedStyle(document.documentElement).getPropertyValue('--scene').trim()||'#e6e9e8';scene.background=new THREE.Color(c);}
+applyBg(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyBg);
+new MutationObserver(applyBg).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+// ---------- loop ----------
+function resize(){const w=view.clientWidth,h=view.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/Math.max(h,1);camera.updateProjectionMatrix();}
+new ResizeObserver(resize).observe(view); resize();
+camera.position.set(7.5,11.5,11.5); controls.target.set(0,0,.3);
+const tmp=new THREE.Vector3();
+function tick(now){
+  if(anim){let k=Math.min(1,(now-anim.start)/anim.ms);k=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+    camera.position.lerpVectors(anim.p0,anim.p1,k);controls.target.lerpVectors(anim.t0,anim.t1,k);camera.fov=anim.f0+(anim.f1-anim.f0)*k;camera.updateProjectionMatrix();if(k>=1)anim=null;}
+  controls.update(); if(sel&&selBox.visible){const it=itemsMap.get(sel);if(it)selBox.setFromObject(it.g);} renderer.render(scene,camera);
+  if(!lblWrap.hidden){const w=view.clientWidth,h=view.clientHeight;
+    for(const L of labelItems){tmp.copy(L.v).project(camera);const vis=tmp.z<1&&tmp.z>-1&&Math.abs(tmp.x)<1.1&&Math.abs(tmp.y)<1.1;
+      const dist=camera.position.distanceTo(L.v);
+      L.el.style.display=vis&&dist>1.2?'':'none'; if(vis)L.el.style.left=((tmp.x+1)/2*w)+'px',L.el.style.top=((1-tmp.y)/2*h)+'px';}}
+  requestAnimationFrame(tick);}
+requestAnimationFrame(tick);
+if(matchMedia('(prefers-reduced-motion: reduce)').matches){controls.enableDamping=false;}
+})();
+</script>
+</body>
+</html>
