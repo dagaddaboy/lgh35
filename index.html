@@ -434,8 +434,8 @@ tileSkin('z',0,1.0,0.003,0,TH); tileSkin('z',1.0,1.85,0.003,2.1,TH); tileSkin('z
 tileSkin('z',0,.7,3.112,0,TH); tileSkin('z',1.5,1.9,3.112,0,TH); tileSkin('z',.7,1.5,3.112,2.1,TH);
 tileSkin('z',0,1.06,1.637,0,TH); tileSkin('z',0,1.06,1.758,0,TH);
 // shower: rain shower + thermostat on the north wall, curtain rod at z≈1.0
-cyl(1.28,.035,.014,.95,2.12,mat.steel); box(1.27,1.29,2.1,2.12,.035,.33,mat.steel); cyl(1.28,.33,.15,2.07,2.085,mat.steel);
-box(1.12,1.46,.98,1.04,.03,.09,mat.steel); cyl(1.18,.1,.025,.5,1.4,mat.steel);
+cyl(.38,.035,.014,.95,2.12,mat.steel); box(.37,.39,2.1,2.12,.035,.33,mat.steel); cyl(.38,.33,.15,2.07,2.085,mat.steel);
+box(.21,.55,.98,1.04,.03,.09,mat.steel); cyl(.49,.1,.025,.5,1.4,mat.steel);
 {const rod=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1.64,12),mat.white);rod.rotation.z=Math.PI/2;rod.position.set(.82,2.05,1.06);fixed.add(rod);}
 box(.02,.34,.12,2.03,1.02,1.1,M(0x9cc4e8,{roughness:.8}));        // curtain pulled toward the window
 box(1.62,1.64,1.2,1.24,.3,.8,mat.white);                             // grab bar on the partition
