@@ -46,6 +46,7 @@ h1{font-family:var(--display);font-weight:600;font-size:40px;line-height:1;margi
 .sw{width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,.15)}
 .num{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted)}
 .ctrl{display:flex;flex-direction:column;gap:12px}
+.seg.kseg{grid-template-columns:1fr 1fr}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{all:unset;text-align:center;padding:8px 4px;cursor:pointer;font-weight:500;font-size:14px}
 .seg button+button{border-left:1px solid var(--line)}
@@ -112,6 +113,7 @@ textarea{box-sizing:border-box;width:100%;font-family:var(--mono);font-size:12px
     </header>
 
     <section class="ctrl" aria-label="Visning">
+      <div class="seg kseg" role="group" aria-label="Kök"><button id="kNow" aria-pressed="true">Kök idag</button><button id="kPlan" aria-pressed="false">Kök planerat</button></div>
       <div class="seg" role="group" aria-label="Vy">
         <button id="v3d" aria-pressed="true">3D</button>
         <button id="vplan" aria-pressed="false">Ovanifrån</button>
@@ -225,7 +227,8 @@ const mat={
   frost:new THREE.MeshPhysicalMaterial({color:0xe8eef0,transparent:true,opacity:.7,roughness:.6,clippingPlanes:C}),
   leaf:M(0xfafaf8,{roughness:.5}), plant:M(0x4f7a4a), pot:M(0xc9c4ba), ctx:M(0xd2d6d5), ctx2:M(0xbfc5c3), rail:M(0x4a5050,{roughness:.4,metalness:.4}),
   screen:M(0x111414,{roughness:.2}), cushion:M(0x5d7370), mustard:M(0xc29a4b),
-  kfront:M(0xbfb8aa,{roughness:.55}), kstone:M(0x6f655b,{roughness:.7}), kplinth:M(0xf1f0ec,{roughness:.6}),
+  kfront:M(0xb2b4b1,{roughness:.5}), kstone:M(0x3a3c3d,{roughness:.6}), greydoor:M(0xa9aaa5,{roughness:.45}), pink:M(0xc9a19a,{roughness:.9}),
+  pine:M(0xc98f4e,{roughness:.6}), birch:M(0xd9a96b,{roughness:.55}), marble:M(0xeeeeec,{roughness:.25}), webbing:M(0xe8e1d2,{roughness:.9}), speakerblk:M(0x1d1f20,{roughness:.6}), kplinth:M(0xf1f0ec,{roughness:.6}),
   inox:M(0xb4b6b4,{roughness:.32,metalness:.55}), glassblk:M(0x16191a,{roughness:.15}), led:new THREE.MeshBasicMaterial({color:0xffe2b0,clippingPlanes:C}),
   landsk:M(0x55595a,{roughness:.95}), fridge:M(0x9a9d9d,{roughness:.33,metalness:.5}), cupdoor:M(0xdcdbd6,{roughness:.5}),
   teak:M(0xa5642c,{roughness:.55}), laminate:M(0xdddcd5,{roughness:.6}), mint:M(0x9fcfca,{roughness:.5}), sheep:M(0x5f5a55,{roughness:1})
@@ -296,7 +299,7 @@ wallRun('z',3.53,10.27,9.78,10.13,[{a:4.95,b:6.35,type:'win',y0:.8,y1:2.15,mull:
 wallRun('x',1.26,10.13,10.02,10.27);                                      // party wall (south)
 wallRun('z',5.16,10.02,1.26,1.56,[{a:5.49,b:6.34,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:55},{a:6.45,b:8.6,type:'win',y0:.45,y1:2.15,mull:1}]);
 wallRun('x',-0.3,1.26,5.16,5.46);                                        // kitchen south (exterior, toward balcony)
-wallRun('x',1.56,2.64,5.16,5.26,[{a:1.66,b:2.56,type:'door',hinge:'a',side:1,open:85}]); // kitchen – living room door (photo)
+wallRun('x',1.56,2.64,5.16,5.26,[{a:1.66,b:2.56,type:'open',y1:2.1}]); // kitchen – living room: sliding pocket door (open)
 wallRun('z',2.0,2.66,3.88,3.98);                                          // stub kitchen / smyg (IKEA plan)
 wallRun('z',-0.25,5.46,-0.3,0,[{a:1.0,b:1.85,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:30},{a:2.63,b:3.5,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:30},{a:4.5,b:5.12,type:'win',y0:.85,y1:2.2}]);
 wallRun('x',0,5.06,1.9,2.0,[{a:4.13,b:4.91,type:'door',hinge:'b',side:1,open:85}]); // bath/WC – kitchen
@@ -346,7 +349,16 @@ function kdrawers(x0,x1,parts){const tot=parts.reduce((a,b)=>a+b,0);let y=.1;for
 box(0.0,3.88,0,.1,KZ0,KZ1-.06,mat.kplinth);
 box(0.0,2.66,.1,.86,KZ0,KZ1,mat.kplinth); box(3.26,3.88,.1,.86,KZ0,KZ1,mat.kplinth);
 box(0.0,3.88,.86,.9,KZ0,2.635,mat.kstone);
-box(0.0,3.88,.9,1.25,KZ0,KZ0+.015,mat.kstone);
+const tileTex=(()=>{const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle='#f3f3f1';x.fillRect(0,0,256,256);
+  x.strokeStyle='#c9cac6';x.lineWidth=3;for(let i=0;i<=256;i+=32){x.beginPath();x.moveTo(i,0);x.lineTo(i,256);x.stroke();x.beginPath();x.moveTo(0,i);x.lineTo(256,i);x.stroke();}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(3.88/1.2,.55/1.2);return t;})();
+mat.ktile=M(0xffffff,{map:tileTex,roughness:.35});
+const bsTiles=box(0.0,3.88,.9,1.45,KZ0,KZ0+.012,mat.ktile);          // today: 15x15 white tiles up to the wall cabinets
+const bsUp=box(0.0,3.88,.9,1.1,KZ0,KZ0+.02,mat.kstone);               // planned: 20 cm LOCKEBO upstand
+const KITCHEN={now:{front:0xb2b4b1,stone:0x3a3c3d,tiles:true},plan:{front:0xcfc8b8,stone:0x7d7064,tiles:false}};
+function applyKitchen(k){const c=KITCHEN[k]||KITCHEN.now;mat.kfront.color.setHex(c.front);mat.kstone.color.setHex(c.stone);bsTiles.visible=c.tiles;bsUp.visible=!c.tiles;
+  const a=document.getElementById('kNow'),b=document.getElementById('kPlan');if(a&&b){a.setAttribute('aria-pressed',String(k!=='plan'));b.setAttribute('aria-pressed',String(k==='plan'));}
+  try{localStorage.setItem('lgh35-kitchen',k);}catch(e){}}
 // base run (left → right): drawers 40, dishwasher 60, sink 80, drawers 40+40, range 60, drawers 60
 box(0.0,.06,.1,.86,KZ1,KF,mat.kfront);                                   // filler at window
 kdrawers(.06,.46,[1,1,1,1,1]);
@@ -400,10 +412,10 @@ function grilleAndTop(x0,x1,z0,z1,face){ // ventilation grille 1.85-2.0, cupboar
     box(x0,x1,2.0,H,z0+.02,z1,mat.kplinth);box(x0+.002,x1-.002,2.002,H-.002,z0,z0+.02,mat.cupdoor);box(x0+.15,x1-.15,2.05,2.062,z0-.03,z0,mat.steel);}
   else{box(x0+.04,x1,AP,2.0,z0,z1,mat.kplinth);for(let y=AP+.025;y<2.0;y+=.03)box(x0+.02,x0+.04,y,y+.012,z0+.02,z1-.02,mat.white);
     box(x0+.02,x1,2.0,H,z0,z1,mat.kplinth);box(x0,x0+.02,2.002,H-.002,z0+.002,z1-.002,mat.cupdoor);box(x0-.03,x0,2.05,2.062,z0+.15,z1-.15,mat.steel);}}
-appliance(3.28,3.88,3.79,4.44,'n',3.81); grilleAndTop(3.28,3.88,3.79,4.44,'n');       // fridge
+appliance(3.28,3.875,3.79,4.40,'n',3.81); grilleAndTop(3.28,3.875,3.79,4.40,'n'); box(3.875,3.89,0,H,3.79,4.42,mat.wall,walls);       // fridge
 appliance(2.66,3.28,4.46,5.10,'w',4.53); grilleAndTop(2.64,3.28,4.44,5.16,'w');       // freezer
-box(3.28,3.88,0,H,4.44,5.16,mat.kplinth); box(3.282,3.878,.1,2.3,5.16,5.178,mat.cupdoor); // cupboard toward the living room
-box(3.282,3.878,2.3,H-.002,5.16,5.178,mat.cupdoor); box(3.33,3.35,1.0,1.35,5.178,5.2,mat.steel);
+box(3.28,3.88,0,H,4.42,5.16,mat.wall,walls);                                   // plain wall toward the living room
+box(3.88,3.898,.08,2.32,4.44,5.02,mat.greydoor); box(3.898,3.925,1.04,1.056,4.47,4.77,mat.steel); box(3.898,3.91,1.04,1.056,4.47,4.48,mat.steel); // tall grey cupboard facing the smyg
 // radiator under the kitchen window (photo)
 box(0.01,0.09,.15,.7,4.56,5.06,mat.white);
 // Bath (fixed)
@@ -417,8 +429,7 @@ box(3.27,3.45,0,.9,.38,.82,mat.ceramic); box(3.45,3.95,0,.42,.43,.77,mat.ceramic
 box(4.15,4.65,.78,.86,.0,.45,mat.ceramic); box(4.15,4.65,1.05,1.75,.0,.02,mat.steel);
 // Built-in wardrobes (sovrum), hall cabinet + hooks, walk-in closet shelving
 box(5.77,6.37,0,2.2,8.2,10.0,mat.white); for(const z of[8.8,9.4]) box(6.37,6.38,.05,2.15,z-.004,z+.004,mat.counter);
-for(let z=1.25;z<2.2;z+=.2) box(7.47,7.55,1.65,1.69,z,z+.03,mat.steel);
-box(6.92,7.5,0,2.3,2.48,3.0,mat.white);
+box(7.546,7.55,.015,H,0.84,3.02,mat.pink,walls,false);                         // pink hall wall (photo)
 box(5.77,6.22,0,2.0,3.15,4.48,mat.white); box(6.22,7.52,0,2.0,4.05,4.48,mat.white);
 
 // ---------- movable furniture: builders (local frame: width along x, depth along z, front faces +z) ----------
@@ -483,7 +494,52 @@ function trippTrapp(g,w,d,m){for(const sx of[-1,1]){const x=sx*(w/2-.015);box(x-
 function pendant(g,w,d,m){const r=Math.min(w,d)/2;cyl(0,0,.005,1.62,H,mat.black,g);
   const sh=new THREE.Mesh(new THREE.CylinderGeometry(r*.55,r,.24,32,1,true),m);sh.material.side=THREE.DoubleSide;sh.position.set(0,1.5,0);g.add(sh);
   cyl(0,0,r*.55,1.62,1.64,m,g);const lit=new THREE.Mesh(new THREE.CircleGeometry(r*.96,32),mat.led);lit.rotation.x=Math.PI/2;lit.position.set(0,1.385,0);g.add(lit);}
+function shoeCabinet(g,w,d,m){box(-w/2,w/2,0,1.35,-d/2,d/2,m,g);for(let k=1;k<3;k++){const y=1.35*k/3;box(-w/2+.01,w/2-.01,y-.004,y+.004,d/2,d/2+.004,mat.counter,g);}}
+function shoeRack(g,w,d,m){for(const y of[.1,.3])box(-w/2,w/2,y,y+.012,-d/2,d/2,m,g);for(const sx of[-1,1])box(sx*w/2-.008,sx*w/2+.008,0,.42,-d/2,d/2,m,g);}
+function coatRack(g,w,d,m){box(-w/2,w/2,1.88,1.9,-d/2,d/2,mat.teak,g);for(const sx of[-1,1])box(sx*(w/2-.08)-.01,sx*(w/2-.08)+.01,1.7,1.88,-d/2,-d/2+.06,mat.steel,g);
+  const r=new THREE.Mesh(new THREE.CylinderGeometry(.014,.014,w,12),mat.teak);r.rotation.z=Math.PI/2;r.position.set(0,1.76,0);g.add(r);
+  const cols=[0xb39064,0xd7a4d6,0x1f2326,0x6b5240,0xd7b23a,0x23272b,0xe4a3d9];const n=Math.max(2,Math.floor(w/.11));
+  for(let k=0;k<n;k++){const x=-w/2+.08+k*(w-.16)/(n-1);box(x-.04,x+.04,.95+(k%3)*.08,1.74,-.2,.2,M(cols[k%cols.length],{roughness:.95}),g);}}
+function doorCabinet(g,w,d,h,m,doors,legs){const y0=legs?.1:0;box(-w/2,w/2,y0,h,-d/2,d/2,m,g);if(legs)for(const sx of[-1,1])for(const sz of[-1,1])box(sx*(w/2-.04)-.015,sx*(w/2-.04)+.015,0,y0,sz*(d/2-.04)-.015,sz*(d/2-.04)+.015,m,g);
+  for(let k=1;k<doors;k++){const x=-w/2+w*k/doors;box(x-.003,x+.003,y0+.01,h-.01,d/2,d/2+.004,mat.counter,g);}}
+function chestPine(g,w,d,m){box(-w/2,w/2,.12,.92,-d/2,d/2,m,g);legs(g,w,d,.12,m,.03,.02);
+  for(let k=1;k<3;k++){const y=.12+.8*k/3;box(-w/2+.01,w/2-.01,y-.004,y+.004,d/2,d/2+.004,mat.darkwood,g);}
+  for(let k=0;k<3;k++){const y=.12+.8*(k+.5)/3;for(const sx of[-1,1])cyl(sx*w*.28,d/2+.015,.018,y-.018,y+.018,mat.wood,g).rotation.x=Math.PI/2;}}
+function stool(g,w,d,m){box(-w/2,w/2,.43,.46,-d/2,d/2,mat.birch,g);legs(g,w,d,.43,mat.white,.04,.013);}
+function pixelCabinet(g,w,d,m){box(-w/2,w/2,.36,1.26,-d/2,d/2,m,g);legs(g,w,d,.36,m,.03,.02);
+  const pal=[0x1f5a4a,0xf4f4f2,0x433a5e,0x16181a,0xf2b81e,0x4f9a3c,0x5aa8d0,0xc5306f,0x24318a];const cw=(w-.02)/4,ch=.9/6;
+  for(let r=0;r<6;r++)for(let c=0;c<4;c++){const x0=-w/2+.01+c*cw,y0=.36+r*ch;box(x0+.003,x0+cw-.003,y0+.003,y0+ch-.003,d/2,d/2+.008,M(pal[(r*5+c*3+r*c)%pal.length],{roughness:.4}),g);}}
+function sideboardTv(g,w,d,m){box(-w/2,w/2,.17,.75,-d/2,d/2,m,g);legs(g,w,d,.17,m,.06,.02);
+  for(const x of[-w/6,w/6])box(x-.004,x+.004,.19,.73,d/2,d/2+.004,mat.darkwood,g);for(const y of[.34,.53])box(-w/6,w/6,y-.004,y+.004,d/2,d/2+.004,mat.darkwood,g);
+  const tw=Math.min(1.0,w-.3);box(-tw/2-.1,tw/2-.1,.75,.77,-d/2+.08,-d/2+.28,mat.frame,g);box(-tw/2-.1,tw/2-.1,.82,.82+tw*.6,-d/2+.12,-d/2+.16,mat.frame,g);
+  box(-tw/2-.06,tw/2-.14,.86,.78+tw*.6,-d/2+.159,-d/2+.163,mat.screen,g);box(-.14,-.06,.77,.82,-d/2+.12,-d/2+.16,mat.frame,g);}
+function speaker(g,w,d,m){box(-w/2,w/2,.03,1.0,-d/2,d/2,m,g);box(-w/2-.03,w/2+.03,0,.03,-d/2-.03,d/2+.03,m,g);}
+function coffeeBirch(g,w,d,m){box(-w/2,w/2,.5,.53,-d/2,d/2,m,g);box(-w/2+.04,w/2-.04,.45,.5,-d/2+.04,d/2-.04,m,g);legs(g,w,d,.5,m,.06,.03);}
+function spindleArmchair(g,w,d,m){const hw=w/2,hd=d/2;box(-hw,hw,.38,.42,-hd,hd,m,g);legs(g,w,d,.38,m,.05,.017);box(-hw+.03,hw-.03,.14,.16,-hd+.05,hd-.05,m,g);
+  box(-hw,hw,1.0,1.05,-hd-.05,-hd-.01,m,g);for(let k=0;k<9;k++){const x=-hw+.04+k*(w-.08)/8;box(x-.008,x+.008,.42,1.0,-hd-.04,-hd-.02,m,g);}
+  for(const sx of[-1,1]){box(sx*hw-.025,sx*hw+.025,.62,.65,-hd-.04,hd-.03,m,g);box(sx*hw-.01,sx*hw+.01,.42,.62,hd-.06,hd-.04,m,g);}}
+function evaChair(g,w,d,m){for(const sx of[-1,1]){const x=sx*(w/2-.02);box(x-.02,x+.02,0,.04,-d/2,d/2,mat.birch,g);box(x-.02,x+.02,.04,.62,d/2-.06,d/2-.02,mat.birch,g);box(x-.02,x+.02,.55,.6,-d/2+.1,d/2,mat.birch,g);}
+  const seat=new THREE.Mesh(new THREE.BoxGeometry(w-.06,.02,d*.62),m);seat.position.set(0,.36,d*.12);seat.rotation.x=-.12;seat.castShadow=true;g.add(seat);
+  const back=new THREE.Mesh(new THREE.BoxGeometry(w-.06,.62,.02),m);back.position.set(0,.66,-d/2+.12);back.rotation.x=-.32;back.castShadow=true;g.add(back);}
+function sideTableMarble(g,w,d,m){cyl(0,0,.012,0,.55,mat.white,g);cyl(0,0,.17,0,.015,mat.white,g);const t=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,.025,40),m);t.scale.set(w,1,d);t.position.set(0,.56,0);t.castShadow=true;g.add(t);}
+function stringShelf(g,w,d,m){const n=Math.max(1,Math.round(w/.8));for(let k=0;k<=n;k++){const x=-w/2+k*w/n;box(x-.006,x+.006,.95,2.05,-d/2,d/2,mat.white,g,false);}
+  for(const y of[1.05,1.35,1.65,1.95])box(-w/2,w/2,y,y+.018,-d/2,d/2,m,g);}
 const CAT={
+  shoeCabinet:{name:'Skoskåp, vitt',w:.49,d:.28,m:mat.white,b:shoeCabinet},
+  shoeRack:{name:'Skoställ, tråd',w:.7,d:.3,m:mat.white,b:shoeRack},
+  coatRack:{name:'Hatthylla med klädstång',w:.9,d:.32,m:mat.teak,b:coatRack},
+  ivar:{name:'IVAR skåp, furu',w:.8,d:.3,m:mat.pine,b:(g,w,d,m)=>doorCabinet(g,w,d,.83,m,2,false)},
+  chestPine:{name:'Byrå, furu (TARVA)',w:.79,d:.39,m:mat.pine,b:chestPine},
+  stool:{name:'Pall',w:.35,d:.35,m:mat.white,b:stool},
+  pixelCabinet:{name:'Skåp med färgrutor',w:.62,d:.4,m:mat.white,b:pixelCabinet},
+  sideboardTv:{name:'Sideboard teak med TV',w:1.8,d:.45,m:mat.teak,b:sideboardTv},
+  speaker:{name:'Golvhögtalare',w:.22,d:.3,m:mat.speakerblk,b:speaker},
+  coffeeBirch:{name:'Soffbord, björk',w:.65,d:.65,m:mat.birch,b:coffeeBirch},
+  spindleArmchair:{name:'Pinnfåtölj',w:.62,d:.62,m:mat.white,b:spindleArmchair},
+  evaChair:{name:'Fåtölj, böjträ/gjord',w:.6,d:.75,m:mat.webbing,b:evaChair},
+  sideTableMarble:{name:'Sidobord, marmor',w:.5,d:.4,m:mat.marble,b:sideTableMarble},
+  stringShelf:{name:'Vägghylla (String)',w:1.6,d:.3,m:mat.teak,b:stringShelf},
+  recordCabinet:{name:'Lågt skåp, vitt',w:1.2,d:.4,m:mat.white,b:(g,w,d,m)=>doorCabinet(g,w,d,.72,m,2,false)},
   tableTeak:{name:'Matbord teak/laminat',w:1.3,d:.8,m:mat.laminate,b:tableTeak},
   kitchenbench:{name:'Kökssoffa, pinnar',w:1.6,d:.5,m:mat.white,b:spindleBench},
   spindlechair:{name:'Pinnstol',w:.42,d:.45,m:mat.white,b:spindleChair},
@@ -536,7 +592,7 @@ const W=(x,y,z)=>new THREE.Vector3(x-CX,y,z-CZ);
 const presets={
   '3d':()=>flyTo(new THREE.Vector3(7.5,11.5,11.5),new THREE.Vector3(0,0,0.3)),
   'plan':()=>flyTo(new THREE.Vector3(0,16.5,0.9),new THREE.Vector3(0,0,0.3))};
-function setSeg(id){for(const b of document.querySelectorAll('.seg button'))b.setAttribute('aria-pressed',String(b.id===id));}
+function setSeg(id){for(const b of document.querySelectorAll('.seg:not(.kseg) button'))b.setAttribute('aria-pressed',String(b.id===id));}
 function clearRooms(){for(const b of ul.querySelectorAll('button'))b.setAttribute('aria-pressed','false');}
 document.getElementById('v3d').onclick=()=>{setLbl(true);setSeg('v3d');controls.autoRotate=false;clearRooms();presets['3d']();};
 document.getElementById('vplan').onclick=()=>{setLbl(true);setSeg('vplan');controls.autoRotate=false;clearRooms();presets['plan']();};
@@ -708,6 +764,9 @@ $('seedBtn').onclick=async()=>{const b=$('seedBtn');b.disabled=true;setStatus('L
       e=>{if(e&&e.code==='permission-denied'){$('fOn').hidden=true;$('fOff').hidden=false;$('fOff').textContent='Kontot '+(u.email||'')+' har inte behörighet. Lägg till adressen i Firestore-reglerna (se README).';}
         else setStatus('Möbleringen kunde inte laddas. Ladda om sidan.',true);});});
 })();
+
+$('kNow').onclick=()=>applyKitchen('now');$('kPlan').onclick=()=>applyKitchen('plan');
+{let k='now';try{k=localStorage.getItem('lgh35-kitchen')||'now';}catch(e){}applyKitchen(k);}
 
 // ---------- theme-aware background ----------
 function applyBg(){const c=getComputedStyle(document.documentElement).getPropertyValue('--scene').trim()||'#e6e9e8';scene.background=new THREE.Color(c);}
