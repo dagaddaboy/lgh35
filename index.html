@@ -91,6 +91,16 @@ input[type=color]{width:38px;height:33px;padding:2px;border:1px solid var(--line
 textarea{box-sizing:border-box;width:100%;font-family:var(--mono);font-size:12px;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px;resize:vertical}
 .ro .edit-only{display:none!important}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.walkui{position:absolute;inset:0;pointer-events:none}
+.walkbar{position:absolute;top:12px;left:50%;transform:translateX(-50%);pointer-events:auto;background:var(--label-bg);border:1px solid var(--line);border-radius:8px;
+  padding:6px 6px 6px 12px;display:flex;gap:10px;align-items:center;font-size:13px;max-width:calc(100% - 32px)}
+.joy{position:absolute;left:max(20px,env(safe-area-inset-left,0px));bottom:max(20px,env(safe-area-inset-bottom,0px));width:120px;height:120px;border-radius:50%;
+  background:rgba(20,27,27,.22);border:1px solid rgba(255,255,255,.6);pointer-events:auto;touch-action:none}
+.knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,255,255,.88);box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.cross{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:rgba(255,255,255,.8);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.walk-touch{display:none}
+@media (hover:hover) and (pointer:fine){.joy{display:none}}
+@media (hover:none),(pointer:coarse){.walk-desk{display:none}.walk-touch{display:inline}}
 .loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);font-size:13px}
 @media (max-width:760px){
   .app{grid-template-columns:1fr;grid-template-rows:1fr auto}
@@ -123,6 +133,8 @@ textarea{box-sizing:border-box;width:100%;font-family:var(--mono);font-size:12px
         <div class="row"><label for="wallh" class="sec-title" style="margin:0">Vägghöjd</label><span class="num" id="wallhv">2,70 m</span></div>
         <input id="wallh" type="range" min="0.3" max="2.7" step="0.05" value="2.7">
       </div>
+      <div class="row2"><button id="walkBtn" class="btn" type="button" aria-pressed="false">Gå runt i lägenheten</button>
+        <label for="walkH" class="hint">Längd</label><input id="walkH" type="number" min="100" max="220" step="1" value="179" style="width:72px"><span class="hint">cm</span></div>
       <div class="toggles">
         <label class="tog"><input id="tFurn" type="checkbox" checked> Möbler</label>
         <label class="tog"><input id="tLbl" type="checkbox" checked> Rumsnamn</label>
@@ -172,6 +184,11 @@ textarea{box-sizing:border-box;width:100%;font-family:var(--mono);font-size:12px
   <main class="view" id="view">
     <div class="loading" id="loading">Laddar 3D-modell…</div>
     <div class="labels" id="labels"></div>
+    <div class="walkui" id="walkUI" hidden>
+      <div class="cross"></div>
+      <div class="walkbar"><span class="walk-desk">W A S D / pilar: gå · Skift: spring · dra: titta · Esc: avsluta</span><span class="walk-touch">Styrspak: gå · dra: titta</span><button id="walkExit" class="btn" type="button">Avsluta</button></div>
+      <div class="joy" id="joy"><div class="knob" id="knob"></div></div>
+    </div>
   </main>
 </div>
 
@@ -754,7 +771,7 @@ const cv=renderer.domElement, ray=new THREE.Raycaster(), ndc=new THREE.Vector2()
 function setRay(e){const r=cv.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(ndc,camera);}
 function pickItem(){if(!furn.visible)return null;for(const h of ray.intersectObjects(furn.children,true)){let o=h.object;while(o&&!o.userData.itemId)o=o.parent;if(o)return o.userData.itemId;}return null;}
 function floorPt(){return ray.ray.intersectPlane(floorPl,hitP)?{x:hitP.x+CX,z:hitP.z+CZ}:null;}
-cv.addEventListener('pointerdown',e=>{if(e.button!==0||dragging)return;setRay(e);const id=pickItem();downAt={x:e.clientX,y:e.clientY,id};
+cv.addEventListener('pointerdown',e=>{if(walk.on||e.button!==0||dragging)return;setRay(e);const id=pickItem();downAt={x:e.clientX,y:e.clientY,id};
   if(!id||id!==sel||!moveMode||!canEdit||!db)return;           // orbit/zoom never moves furniture
   const p=floorPt();if(!p)return;const it=itemsMap.get(id);
   dragging={id,ox:it.g.position.x-p.x,oz:it.g.position.z-p.z,x0:it.g.position.x,z0:it.g.position.z,rot0:+it.d.rot||0,moved:false,pid:e.pointerId,sx:e.clientX,sy:e.clientY};
@@ -763,7 +780,7 @@ cv.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==dragging.pid)r
   if(!dragging.moved&&Math.hypot(e.clientX-dragging.sx,e.clientY-dragging.sy)<4)return;dragging.moved=true;
   setRay(e);const p=floorPt();if(!p)return;const it=itemsMap.get(dragging.id);if(!it)return;
   it.g.position.x=snap(clampX(p.x+dragging.ox));it.g.position.z=snap(clampZ(p.z+dragging.oz));showSel();});
-function endDrag(e){if(dragging&&e.pointerId===dragging.pid){const d=dragging;dragging=null;controls.enabled=true;downAt=null;const it=itemsMap.get(d.id);
+function endDrag(e){if(walk.on)return;if(dragging&&e.pointerId===dragging.pid){const d=dragging;dragging=null;controls.enabled=true;downAt=null;const it=itemsMap.get(d.id);
     if(d.moved&&it){const x=r3(it.g.position.x),z=r3(it.g.position.z);it.d={...it.d,x,z};lastDel=null;lastMove={id:d.id,x:r3(d.x0),z:r3(d.z0),rot:d.rot0};$('undoBtn').hidden=false;persist(d.id,{x,z});}return;}
   if(downAt&&e.type==='pointerup'&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<4)select(downAt.id||null);downAt=null;}
 cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
@@ -806,6 +823,58 @@ $('seedBtn').onclick=async()=>{const b=$('seedBtn');b.disabled=true;setStatus('L
 $('kNow').onclick=()=>applyKitchen('now');$('kPlan').onclick=()=>applyKitchen('plan');
 {let k='now';try{k=localStorage.getItem('lgh35-kitchen')||'now';}catch(e){}applyKitchen(k);}
 
+
+// ---------- walk mode: first-person view at a person's eye height ----------
+const walk={on:false,yaw:0,pitch:0,keys:{},eye:1.66,joy:null,look:null,boxes:[],acc:0,last:0};
+const eyeFor=cm=>Math.round(Math.min(220,Math.max(100,cm||179))*0.93)/100;   // eyes ≈ 7 % below the top of the head
+function collectBoxes(){const out=[],b=new THREE.Box3();
+  const add=o=>{if(o.material===mat.poche||o.isLight)return;b.setFromObject(o);if(b.isEmpty())return;if(b.min.y<0.5&&b.max.y>0.3)out.push([b.min.x,b.max.x,b.min.z,b.max.z]);};
+  walls.children.forEach(add);fixed.children.forEach(add);ctx.children.forEach(add);if(furn.visible)furn.children.forEach(add);walk.boxes=out;}
+function blocked(x,z){const r=.2;for(const q of walk.boxes)if(x>q[0]-r&&x<q[1]+r&&z>q[2]-r&&z<q[3]+r)return true;return false;}
+function walkStep(dt){const k=walk.keys;walk.acc+=dt;if(walk.acc>1){walk.acc=0;collectBoxes();}
+  let f=(k.KeyW||k.ArrowUp?1:0)-(k.KeyS||k.ArrowDown?1:0),sd=(k.KeyD?1:0)-(k.KeyA?1:0);
+  walk.yaw-=((k.ArrowRight?1:0)-(k.ArrowLeft?1:0))*1.8*dt;
+  if(walk.joy){f-=walk.joy.y;sd+=walk.joy.x;}
+  const len=Math.hypot(f,sd);if(len>1){f/=len;sd/=len;}
+  const sp=(k.ShiftLeft||k.ShiftRight?2.6:1.4)*dt,sn=Math.sin(walk.yaw),cs=Math.cos(walk.yaw);
+  const dx=(-sn*f+cs*sd)*sp,dz=(-cs*f-sn*sd)*sp,p=camera.position,stuck=blocked(p.x,p.z);
+  if(dx&&(!blocked(p.x+dx,p.z)||stuck))p.x+=dx; if(dz&&(!blocked(p.x,p.z+dz)||stuck))p.z+=dz;
+  p.y=walk.eye;camera.rotation.set(walk.pitch,walk.yaw,0,'YXZ');}
+function enterWalk(){if(walk.on)return;walk.on=true;anim=null;controls.enabled=false;controls.autoRotate=false;select(null);clearRooms();setSeg('');
+  walk.eye=eyeFor(+$('walkH').value);try{localStorage.setItem('lgh35-height',$('walkH').value);}catch(e){}
+  collectBoxes();
+  // start where the view is centred if that spot is inside the flat and free, otherwise in the hall facing the smyg
+  let x=controls.target.x,z=controls.target.z,mx=x+CX,mz=z+CZ,yaw=Math.atan2(camera.position.x-x,camera.position.z-z);
+  if(!(mx>0.2&&mx<9.6&&mz>0.2&&mz<9.8)||blocked(x,z)){x=6.45-CX;z=1.7-CZ;yaw=Math.PI*0.75;}
+  walk.yaw=yaw;walk.pitch=0;camera.position.set(x,walk.eye,z);camera.rotation.order='YXZ';camera.fov=72;camera.updateProjectionMatrix();
+  lblWrap.hidden=true;$('walkUI').hidden=false;$('walkBtn').setAttribute('aria-pressed','true');}
+function exitWalk(){if(!walk.on)return;walk.on=false;walk.keys={};walk.joy=null;walk.look=null;$('knob').style.transform='';
+  $('walkUI').hidden=true;$('walkBtn').setAttribute('aria-pressed','false');camera.rotation.order='XYZ';
+  const dir=new THREE.Vector3(-Math.sin(walk.yaw),0,-Math.cos(walk.yaw));controls.target.copy(camera.position).add(dir.multiplyScalar(.6));
+  controls.enabled=true;setSeg('');}
+$('walkBtn').onclick=()=>walk.on?exitWalk():enterWalk();$('walkExit').onclick=exitWalk;
+$('walkH').addEventListener('change',()=>{walk.eye=eyeFor(+$('walkH').value);try{localStorage.setItem('lgh35-height',$('walkH').value);}catch(e){}});
+try{const h=localStorage.getItem('lgh35-height');if(h)$('walkH').value=h;}catch(e){}
+for(const id of['v3d','vplan','vrot'])$(id).addEventListener('click',()=>{if(walk.on){walk.on=false;walk.keys={};walk.joy=null;$('walkUI').hidden=true;$('walkBtn').setAttribute('aria-pressed','false');camera.rotation.order='XYZ';controls.enabled=true;}},{capture:true});
+for(const b of ul.querySelectorAll('button'))b.addEventListener('click',()=>{if(walk.on)exitWalk();},{capture:true});
+// look by dragging
+cv.addEventListener('pointerdown',e=>{if(!walk.on)return;walk.look={id:e.pointerId,x:e.clientX,y:e.clientY};try{cv.setPointerCapture(e.pointerId);}catch(_){}});
+cv.addEventListener('pointermove',e=>{const L=walk.look;if(!walk.on||!L||e.pointerId!==L.id)return;
+  walk.yaw-=(e.clientX-L.x)*.0045;walk.pitch=Math.max(-1.3,Math.min(1.3,walk.pitch-(e.clientY-L.y)*.0045));L.x=e.clientX;L.y=e.clientY;});
+const endLook=e=>{if(walk.look&&e.pointerId===walk.look.id)walk.look=null;};cv.addEventListener('pointerup',endLook);cv.addEventListener('pointercancel',endLook);
+// touch joystick
+const joyEl=$('joy'),knob=$('knob');let joyId=null;
+function moveJoy(e){const r=joyEl.getBoundingClientRect();let x=(e.clientX-r.left-r.width/2)/(r.width/2),y=(e.clientY-r.top-r.height/2)/(r.height/2);
+  const l=Math.hypot(x,y);if(l>1){x/=l;y/=l;}walk.joy={x,y};knob.style.transform='translate('+(x*34)+'px,'+(y*34)+'px)';}
+joyEl.addEventListener('pointerdown',e=>{joyId=e.pointerId;try{joyEl.setPointerCapture(e.pointerId);}catch(_){}moveJoy(e);e.preventDefault();});
+joyEl.addEventListener('pointermove',e=>{if(e.pointerId===joyId)moveJoy(e);});
+const endJoy=e=>{if(e.pointerId!==joyId)return;joyId=null;walk.joy=null;knob.style.transform='';};
+joyEl.addEventListener('pointerup',endJoy);joyEl.addEventListener('pointercancel',endJoy);
+// keyboard
+document.addEventListener('keydown',e=>{if(!walk.on)return;const tg=e.target;if(tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA'||tg.tagName==='SELECT'))return;
+  if(e.key==='Escape'){exitWalk();return;}walk.keys[e.code]=true;if(e.code.startsWith('Arrow')||e.code==='Space')e.preventDefault();});
+document.addEventListener('keyup',e=>{walk.keys[e.code]=false;});window.addEventListener('blur',()=>{walk.keys={};});
+
 // ---------- theme-aware background ----------
 function applyBg(){const c=getComputedStyle(document.documentElement).getPropertyValue('--scene').trim()||'#e6e9e8';scene.background=new THREE.Color(c);}
 applyBg(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyBg);
@@ -817,9 +886,9 @@ new ResizeObserver(resize).observe(view); resize();
 camera.position.set(7.5,11.5,11.5); controls.target.set(0,0,.3);
 const tmp=new THREE.Vector3();
 function tick(now){
-  if(anim){let k=Math.min(1,(now-anim.start)/anim.ms);k=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+  if(anim&&!walk.on){let k=Math.min(1,(now-anim.start)/anim.ms);k=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
     camera.position.lerpVectors(anim.p0,anim.p1,k);controls.target.lerpVectors(anim.t0,anim.t1,k);camera.fov=anim.f0+(anim.f1-anim.f0)*k;camera.updateProjectionMatrix();if(k>=1)anim=null;}
-  controls.update(); if(sel&&selBox.visible){const it=itemsMap.get(sel);if(it)selBox.setFromObject(it.g);} renderer.render(scene,camera);
+  if(walk.on)walkStep(Math.min(.1,(now-(walk.last||now))/1000));else controls.update();walk.last=now; if(sel&&selBox.visible){const it=itemsMap.get(sel);if(it)selBox.setFromObject(it.g);} renderer.render(scene,camera);
   if(!lblWrap.hidden){const w=view.clientWidth,h=view.clientHeight;
     for(const L of labelItems){tmp.copy(L.v).project(camera);const vis=tmp.z<1&&tmp.z>-1&&Math.abs(tmp.x)<1.1&&Math.abs(tmp.y)<1.1;
       const dist=camera.position.distanceTo(L.v);
