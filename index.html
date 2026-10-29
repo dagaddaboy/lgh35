@@ -175,7 +175,7 @@ textarea{box-sizing:border-box;width:100%;font-family:var(--mono);font-size:12px
     <section>
       <h2 class="sec-title">Rum – klicka för att gå in</h2>
       <ul class="rooms" id="rooms"></ul>
-      <p class="hint" style="margin-top:8px">Dra för att rotera, scrolla/nypa för att zooma, högerklick eller två fingrar för att flytta.</p>
+      <p class="hint" style="margin-top:8px">Klicka på en dörr för att öppna eller stänga den. Dra för att rotera, scrolla/nypa för att zooma, högerklick eller två fingrar för att flytta.</p>
     </section>
 
     <p class="note">Geometrin är uppmätt från planritningen, skalad så att bostadsytan blir 79,4 m² och kontrollerad mot robotdammsugarens karta (proportionerna stämmer inom några procent). Köket följer den uppmätta IKEA-ritningen (3160 × 3880 mm). Rumsnamnen följer robotens karta. Räkna med ±10 cm på enskilda mått. Rumsytor är ungefärliga golvytor, takhöjd 2,70 m (uppmätt i köket). Möbleringen sparas i Firebase och delas mellan de konton som finns i Firestore-reglerna.</p>
@@ -272,6 +272,7 @@ function wallRun(axis,from,to,t0,t1,ops=[]){
   seg(cur,to,0,H);}
 // place a box given along/across coords
 function ab(axis,a0,a1,y0,y1,c0,c1,m,parent=walls){return axis==='x'?box(a0,a1,y0,y1,c0,c1,m,parent):box(c0,c1,y0,y1,a0,a1,m,parent);}
+const doors=[];
 function opening(axis,o,t0,t1,y0,y1){
   const mid=(t0+t1)/2, f=0.05;
   if(o.type==='win'||o.type==='french'){
@@ -302,7 +303,9 @@ function opening(axis,o,t0,t1,y0,y1){
     } else { const hd=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.02,0.06),mat.steel); hd.position.set(dir*(lw-0.08),1.0,o.side*(th+0.03)); lg.add(hd);}
     // rotate: base frame for axis x = leaf along +x*dir in wall plane; swing toward side
     let base=axis==='x'?0:-Math.PI/2; // for 'z', local x maps to +z
-    lg.rotation.y=base + (-o.side*dir)*ang*(axis==='x'?1:-1);
+    const kk=(-o.side*dir)*(axis==='x'?1:-1),D={lg,base,kk,ang,cur:o.closed?0:1,tgt:o.closed?0:1,id:axis+o.a.toFixed(2)};
+    try{const v=localStorage.getItem('lgh35-door-'+D.id);if(v!==null)D.cur=D.tgt=+v;}catch(e){}
+    lg.rotation.y=base+kk*ang*D.cur;lg.traverse(m=>{m.userData.doorIdx=doors.length;});doors.push(D);
     piv.add(lg);
   }
 }
@@ -324,7 +327,7 @@ wallRun('z',-0.25,5.46,-0.3,0,[{a:1.0,b:1.85,type:'glassdoor',y1:2.1,hinge:'a',s
 wallRun('x',0,5.06,1.9,2.0,[{a:4.13,b:4.91,type:'door',hinge:'b',side:1,open:85}]); // bath/WC – kitchen
 wallRun('z',0,1.9,3.115,3.23,[{a:.7,b:1.5,type:'open'}]);                 // bath – WC (sliding door)
 box(3.085,3.115,0,2.05,1.45,2.0,mat.leaf,walls);                    // slid-open door panel
-wallRun('x',5.72,7.55,3.02,3.12,[{a:6.0,b:6.75,type:'door',hinge:'a',side:-1,open:80}]); // walk-in closet
+wallRun('x',5.72,7.55,3.02,3.12,[{a:6.0,b:6.75,type:'door',hinge:'a',side:-1,open:80,closed:1}]); // walk-in closet
 wallRun('x',5.67,7.55,4.51,4.61);
 wallRun('z',3.78,4.51,7.55,7.65);
 wallRun('z',3.02,10.02,5.67,5.77,[{a:4.65,b:5.45,type:'door',hinge:'a',side:1,open:85},{a:6.85,b:7.65,type:'door',hinge:'a',side:1,open:85}]);
@@ -935,6 +938,16 @@ document.addEventListener('keydown',e=>{if(!walk.on)return;const tg=e.target;if(
   if(e.key==='Escape'){exitWalk();return;}walk.keys[e.code]=true;if(e.code.startsWith('Arrow')||e.code==='Space')e.preventDefault();});
 document.addEventListener('keyup',e=>{walk.keys[e.code]=false;});window.addEventListener('blur',()=>{walk.keys={};});
 
+
+// ---------- doors: click a door leaf to open/close it (remembered per browser) ----------
+{let dn=null;const cvd=renderer.domElement,rc=new THREE.Raycaster(),v2=new THREE.Vector2();
+ const doorMeshes=[];walls.traverse(m=>{if(m.isMesh&&m.userData.doorIdx!==undefined)doorMeshes.push(m);});
+ cvd.addEventListener('pointerdown',e=>{dn={x:e.clientX,y:e.clientY};},{capture:true});
+ cvd.addEventListener('pointerup',e=>{if(!dn||Math.hypot(e.clientX-dn.x,e.clientY-dn.y)>5){dn=null;return;}dn=null;
+   const r=cvd.getBoundingClientRect();v2.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);rc.setFromCamera(v2,camera);
+   const h=rc.intersectObjects(doorMeshes,false)[0];if(!h||h.distance>12)return;
+   const D=doors[h.object.userData.doorIdx];D.tgt=D.tgt>.5?0:1;try{localStorage.setItem('lgh35-door-'+D.id,String(D.tgt));}catch(_){}});}
+
 // ---------- theme-aware background ----------
 function applyBg(){const c=getComputedStyle(document.documentElement).getPropertyValue('--scene').trim()||'#e6e9e8';scene.background=new THREE.Color(c);}
 applyBg(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyBg);
@@ -946,6 +959,7 @@ new ResizeObserver(resize).observe(view); resize();
 camera.position.set(7.5,11.5,11.5); controls.target.set(0,0,.3);
 const tmp=new THREE.Vector3();
 function tick(now){
+  for(const D of doors){if(D.cur!==D.tgt){const st=.06;D.cur=Math.abs(D.tgt-D.cur)<st?D.tgt:D.cur+Math.sign(D.tgt-D.cur)*st;D.lg.rotation.y=D.base+D.kk*D.ang*D.cur;if(D.cur===D.tgt&&walk.on)collectBoxes();}}
   if(anim&&!walk.on){let k=Math.min(1,(now-anim.start)/anim.ms);k=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
     camera.position.lerpVectors(anim.p0,anim.p1,k);controls.target.lerpVectors(anim.t0,anim.t1,k);camera.fov=anim.f0+(anim.f1-anim.f0)*k;camera.updateProjectionMatrix();if(k>=1)anim=null;}
   if(walk.on)walkStep(Math.min(.1,(now-(walk.last||now))/1000));else controls.update();walk.last=now; if(sel&&selBox.visible){const it=itemsMap.get(sel);if(it)selBox.setFromObject(it.g);} renderer.render(scene,camera);
