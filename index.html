@@ -1068,13 +1068,14 @@ function sunPos(dateStr,hours){const [y,m,d]=dateStr.split('-').map(Number);cons
   const gmst=((18.697374558+24.06570982441908*D)%24+24)%24,H_=((gmst*15+LON)*rad-ra),la=LAT*rad;
   const el=Math.asin(Math.sin(la)*Math.sin(dec)+Math.cos(la)*Math.cos(dec)*Math.cos(H_));
   let az=Math.atan2(-Math.sin(H_),Math.tan(dec)*Math.cos(la)-Math.sin(la)*Math.cos(H_))/rad;az=(az+360)%360;return {el:el/rad,az};}
+const skyAmb=new THREE.AmbientLight(0xf4f1ea,0);scene.add(skyAmb);
 const sunCol=new THREE.Color(),warmC=new THREE.Color(0xffb36b),whiteC=new THREE.Color(0xfff6e8);
 function updateSun(){const ds=$('sunD').value,h=+$('sunT').value;const {el,az}=sunPos(ds,h);
   const b=az*Math.PI/180,dir=NV.clone().multiplyScalar(Math.cos(b)).add(EV.clone().multiplyScalar(Math.sin(b)));
   const er=Math.max(el,.5)*Math.PI/180;sun.position.set(dir.x*Math.cos(er)*25,Math.sin(er)*25,dir.z*Math.cos(er)*25);
   const day=Math.min(1,Math.max(0,(el+4)/14));DARK=EVE||day<.35;const s=EVE?0:Math.min(1,Math.max(0,Math.sin(el*Math.PI/180)*2.2));
   sunCol.copy(warmC).lerp(whiteC,Math.min(1,Math.max(0,el/25)));sun.color.copy(sunCol);
-  sun.intensity=s*1.0;hemi.intensity=EVE?.07:.08+.62*day;fill.intensity=EVE?0:.22*day;
+  sun.intensity=s*1.0;hemi.intensity=EVE?.12:.12+.68*day;fill.intensity=EVE?0:.3*day;skyAmb.intensity=EVE?0:.12*day;
   for(const L of lamps.values())setLamp(L,L.on);
   const hh=Math.floor(h)%24,mm=Math.round((h-Math.floor(h))*60);$('sunV').textContent=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
   $('sunInfo').textContent=el>0?('Solen står i '+Math.round(az)+'° (balkongen 240°), '+Math.round(el)+'° över horisonten'):'Solen har gått ner';}
