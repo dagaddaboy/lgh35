@@ -67,6 +67,10 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .lbl .n{font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:.04em;text-transform:uppercase}
 .lbl .a{font-family:var(--mono);font-size:11px;color:var(--muted)}
 .lbl.ctx .n{font-weight:500;color:var(--muted)}
+.sunrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+.sunrow input[type=date]{font:inherit;font-size:13px;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+.compass{position:absolute;right:max(14px,env(safe-area-inset-right,0px));bottom:14px;width:46px;height:46px;border-radius:50%;background:var(--label-bg);border:1px solid var(--line);pointer-events:none}
+.compass svg{width:100%;height:100%}
 .north{position:absolute;right:max(14px,env(safe-area-inset-right,0px));top:14px;font-family:var(--mono);font-size:11px;color:var(--muted);
   background:var(--label-bg);border:1px solid var(--line);border-radius:4px;padding:4px 8px}
 [hidden]{display:none!important}
@@ -135,6 +139,12 @@ textarea{box-sizing:border-box;width:100%;font-family:var(--mono);font-size:12px
       </div>
       <div class="row2"><button id="walkBtn" class="btn" type="button" aria-pressed="false">Gå runt i lägenheten</button>
         <label for="walkH" class="hint">Längd</label><input id="walkH" type="number" min="100" max="220" step="1" value="179" style="width:72px"><span class="hint">cm</span></div>
+      <div>
+        <div class="row"><label for="sunT" class="sec-title" style="margin:0">Sol över dygnet</label><span class="num" id="sunV">13:00</span></div>
+        <input id="sunT" type="range" min="0" max="24" step="0.25" value="13">
+        <div class="sunrow"><input id="sunD" type="date" aria-label="Datum"><span></span><button id="sunPlay" class="btn" type="button">Spela dag</button></div>
+        <p class="hint" id="sunInfo" style="margin:6px 0 0"></p>
+      </div>
       <div class="toggles">
         <label class="tog"><input id="tFurn" type="checkbox" checked> Möbler</label>
         <label class="tog"><input id="tLbl" type="checkbox" checked> Rumsnamn</label>
@@ -185,6 +195,7 @@ textarea{box-sizing:border-box;width:100%;font-family:var(--mono);font-size:12px
   <main class="view" id="view">
     <div class="loading" id="loading">Laddar 3D-modell…</div>
     <div class="labels" id="labels"></div>
+    <div class="compass" aria-hidden="true"><svg viewBox="-23 -23 46 46"><g id="compassRot"><path d="M0,-17 L5,0 L0,-3 L-5,0Z" fill="#c0392b"/><path d="M0,17 L5,0 L0,3 L-5,0Z" fill="#8a9593"/><text x="0" y="-8" font-size="0" fill="none">N</text></g></svg></div>
     <div class="walkui" id="walkUI" hidden>
       <div class="cross"></div>
       <div class="walkbar"><span class="walk-desk">W A S D / pilar: gå · Skift: spring · dra: titta · Esc: avsluta</span><span class="walk-touch">Styrspak: gå · dra: titta</span><button id="walkExit" class="btn" type="button">Avsluta</button></div>
@@ -367,9 +378,9 @@ box(5.72,7.8,-0.2,0.0,-1.9,0.59,mat.ctx,ctx,false); box(7.8,10.13,-0.2,0.6,-0.6,
 const ctxLabels=[{name:'Trapphus',p:[6.7,-0.8]},{name:'Hisschakt',p:[9.0,1.5]}];
 
 // ---------- lamps: click a lamp to switch it on/off (remembered per browser) ----------
-const lamps=new Map();let EVE=false;
+const lamps=new Map();let EVE=false,DARK=false;
 function glowMat(col,base){return new THREE.MeshStandardMaterial({color:base??col,emissive:col,emissiveIntensity:0,roughness:.55,clippingPlanes:C,side:THREE.DoubleSide});}
-function setLamp(L,on){L.on=on;L.light.visible=on&&EVE;if(L.extra)for(const l of L.extra)l.visible=on&&EVE;for(const m of L.mats)m.emissiveIntensity=on?L.glow:0;}
+function setLamp(L,on){L.on=on;L.light.visible=on&&DARK;if(L.extra)for(const l of L.extra)l.visible=on&&DARK;for(const m of L.mats)m.emissiveIntensity=on?L.glow:0;}
 function regLamp(key,parent,pos,col,int,dist,mats,glow=1){const light=new THREE.PointLight(col,int,dist,2);light.position.set(pos[0],pos[1],pos[2]);parent.add(light);
   const L={key,light,mats,glow,on:true};lamps.set(key,L);parent.userData.lampKey=key;parent.traverse(o=>{if(o.isMesh&&mats.includes(o.material))o.userData.lampKey=key;});
   let on=true;try{const v=localStorage.getItem('lgh35-lamp-'+key);if(v!==null)on=v==='1';}catch(e){}setLamp(L,on);return L;}
@@ -1042,11 +1053,43 @@ document.addEventListener('keyup',e=>{walk.keys[e.code]=false;});window.addEvent
    const h=rc.intersectObjects(doorMeshes,false)[0];if(!h||h.distance>12)return;
    const D=doors[h.object.userData.doorIdx];D.tgt=D.tgt>.5?0:1;try{localStorage.setItem('lgh35-door-'+D.id,String(D.tgt));}catch(_){}});}
 
-// ---------- evening mode: dim daylight so the lamps carry the room ----------
-function applyEve(on){EVE=on;for(const L of lamps.values())setLamp(L,L.on);hemi.intensity=on?.07:.75;sun.intensity=on?.04:.75;fill.intensity=on?0:.25;renderer.toneMappingExposure=1;
-  try{localStorage.setItem('lgh35-eve',on?'1':'0');}catch(e){}}
+// ---------- sun: Gothenburg 57.7°N 11.97°E, balcony facing 240° (model -x) ----------
+// compass → model: bearing b gives dir = cos b·N + sin b·E with N=(0.5,0,-0.866), E=(0.866,0,0.5)
+const LAT=57.7,LON=11.97,NV=new THREE.Vector3(.5,0,-.8660254),EV=new THREE.Vector3(.8660254,0,.5);
+// invisible roof so the sun only reaches the rooms through the windows
+{const rm=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false});
+ for(const q of [[-0.3,10.13,-0.25,5.46],[1.26,10.13,5.46,10.27]]){const r=box(q[0],q[1],H,H+.06,q[2],q[3],rm,ctx);r.castShadow=true;r.receiveShadow=false;r.renderOrder=-1;}}
+function stockholmOffset(y,m,d,h){const lastSun=mo=>{const t=new Date(Date.UTC(y,mo,0));return t.getUTCDate()-t.getUTCDay();};
+  const u=Date.UTC(y,m-1,d,h)-3600e3,a=Date.UTC(y,2,lastSun(3),1),b=Date.UTC(y,9,lastSun(10),1);return (u>=a&&u<b)?2:1;}
+function sunPos(dateStr,hours){const [y,m,d]=dateStr.split('-').map(Number);const off=stockholmOffset(y,m,d,hours);
+  const t=Date.UTC(y,m-1,d)+(hours-off)*3600e3,D=(t-Date.UTC(2000,0,1,12))/864e5,rad=Math.PI/180;
+  const g=(357.529+.98560028*D)*rad,q=280.459+.98564736*D,L=(q+1.915*Math.sin(g)+.02*Math.sin(2*g))*rad,e=(23.439-.00000036*D)*rad;
+  const ra=Math.atan2(Math.cos(e)*Math.sin(L),Math.cos(L)),dec=Math.asin(Math.sin(e)*Math.sin(L));
+  const gmst=((18.697374558+24.06570982441908*D)%24+24)%24,H_=((gmst*15+LON)*rad-ra),la=LAT*rad;
+  const el=Math.asin(Math.sin(la)*Math.sin(dec)+Math.cos(la)*Math.cos(dec)*Math.cos(H_));
+  let az=Math.atan2(-Math.sin(H_),Math.tan(dec)*Math.cos(la)-Math.sin(la)*Math.cos(H_))/rad;az=(az+360)%360;return {el:el/rad,az};}
+const sunCol=new THREE.Color(),warmC=new THREE.Color(0xffb36b),whiteC=new THREE.Color(0xfff6e8);
+function updateSun(){const ds=$('sunD').value,h=+$('sunT').value;const {el,az}=sunPos(ds,h);
+  const b=az*Math.PI/180,dir=NV.clone().multiplyScalar(Math.cos(b)).add(EV.clone().multiplyScalar(Math.sin(b)));
+  const er=Math.max(el,.5)*Math.PI/180;sun.position.set(dir.x*Math.cos(er)*25,Math.sin(er)*25,dir.z*Math.cos(er)*25);
+  const day=Math.min(1,Math.max(0,(el+4)/14));DARK=EVE||day<.35;const s=EVE?0:Math.min(1,Math.max(0,Math.sin(el*Math.PI/180)*2.2));
+  sunCol.copy(warmC).lerp(whiteC,Math.min(1,Math.max(0,el/25)));sun.color.copy(sunCol);
+  sun.intensity=s*1.0;hemi.intensity=EVE?.07:.08+.62*day;fill.intensity=EVE?0:.22*day;
+  for(const L of lamps.values())setLamp(L,L.on);
+  const hh=Math.floor(h)%24,mm=Math.round((h-Math.floor(h))*60);$('sunV').textContent=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+  $('sunInfo').textContent=el>0?('Solen står i '+Math.round(az)+'° (balkongen 240°), '+Math.round(el)+'° över horisonten'):'Solen har gått ner';}
+{const n=new Date(),pad=v=>String(v).padStart(2,'0');$('sunD').value=n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());}
+$('sunT').addEventListener('input',updateSun);$('sunD').addEventListener('change',()=>{if(!$('sunD').value){const n=new Date();$('sunD').valueAsDate=n;}updateSun();});
+let sunAnim=null;$('sunPlay').onclick=()=>{if(sunAnim){clearInterval(sunAnim);sunAnim=null;$('sunPlay').textContent='Spela dag';return;}
+  $('sunPlay').textContent='Stopp';let t=+$('sunT').value;if(t>=21.5)t=5;sunAnim=setInterval(()=>{t+=.05;if(t>22){clearInterval(sunAnim);sunAnim=null;$('sunPlay').textContent='Spela dag';return;}$('sunT').value=t;updateSun();},40);};
+function updateCompass(){const phi=walk.on?walk.yaw:controls.getAzimuthalAngle();const u={x:-Math.sin(phi),z:-Math.cos(phi)},r={x:Math.cos(phi),z:-Math.sin(phi)};
+  const sx=NV.x*r.x+NV.z*r.z,sy=NV.x*u.x+NV.z*u.z;$('compassRot').setAttribute('transform','rotate('+(Math.atan2(sx,sy)*180/Math.PI).toFixed(1)+')');}
+
+// ---------- evening mode: force night so the lamps carry the room ----------
+function applyEve(on){EVE=on;updateSun();try{localStorage.setItem('lgh35-eve',on?'1':'0');}catch(e){}}
 $('tEve').addEventListener('change',e=>applyEve(e.target.checked));
-try{if(localStorage.getItem('lgh35-eve')==='1'){$('tEve').checked=true;applyEve(true);}}catch(e){}
+try{if(localStorage.getItem('lgh35-eve')==='1'){$('tEve').checked=true;EVE=true;}}catch(e){}
+updateSun();
 
 // ---------- theme-aware background ----------
 function applyBg(){const c=getComputedStyle(document.documentElement).getPropertyValue('--scene').trim()||'#e6e9e8';scene.background=new THREE.Color(c);}
@@ -1058,7 +1101,7 @@ function resize(){const w=view.clientWidth,h=view.clientHeight;renderer.setSize(
 new ResizeObserver(resize).observe(view); resize();
 camera.position.set(7.5,11.5,11.5); controls.target.set(0,0,.3);
 const tmp=new THREE.Vector3();
-function tick(now){
+function tick(now){updateCompass();
   for(const D of doors){if(D.cur!==D.tgt){const st=.06;D.cur=Math.abs(D.tgt-D.cur)<st?D.tgt:D.cur+Math.sign(D.tgt-D.cur)*st;D.lg.rotation.y=D.base+D.kk*D.ang*D.cur;if(D.cur===D.tgt&&walk.on)collectBoxes();}}
   if(anim&&!walk.on){let k=Math.min(1,(now-anim.start)/anim.ms);k=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
     camera.position.lerpVectors(anim.p0,anim.p1,k);controls.target.lerpVectors(anim.t0,anim.t1,k);camera.fov=anim.f0+(anim.f1-anim.f0)*k;camera.updateProjectionMatrix();if(k>=1)anim=null;}
