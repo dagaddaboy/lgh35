@@ -1,0 +1,1191 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lägenhet 35 i 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{color-scheme:light}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px}
+
+/* Layout: full-bleed 3D viewport with a drawing-sheet side panel (bottom sheet on phones) */
+:root{
+  --bg:#eef0ef; --panel:#f8f9f8; --fg:#1d2524; --muted:#5f6b69; --line:#d3d9d7;
+  --accent:#2d6a6e; --accent-ink:#ffffff; --chip:#e3e8e6; --scene:#e6e9e8; --label-bg:rgba(255,255,255,.88); --danger:#b4412f;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a1a; --panel:#1b2222; --fg:#e4eae8; --muted:#94a2a0; --line:#2e3838;
+  --accent:#6fb3b6; --accent-ink:#0e1515; --chip:#253030; --scene:#1a2121; --label-bg:rgba(20,27,27,.86); --danger:#e08a78; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a1a; --panel:#1b2222; --fg:#e4eae8; --muted:#94a2a0; --line:#2e3838;
+  --accent:#6fb3b6; --accent-ink:#0e1515; --chip:#253030; --scene:#1a2121; --label-bg:rgba(20,27,27,.86); --danger:#e08a78; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;overflow:hidden}
+.app{height:100%;display:grid;grid-template-columns:330px 1fr}
+.panel{background:var(--panel);border-right:1px solid var(--line);overflow:auto;
+  padding-block:22px 18px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:20px;
+  display:flex;flex-direction:column;gap:20px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-weight:600;font-size:40px;line-height:1;margin:6px 0 0;text-wrap:balance}
+.stats{display:flex;gap:18px;margin-top:10px;font-family:var(--mono);font-size:13px;color:var(--muted);flex-wrap:wrap}
+.stats b{color:var(--fg);font-weight:500}
+.sec-title{font-family:var(--display);font-weight:500;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.rooms{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.rooms button{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;
+  padding:8px 6px;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px}
+.rooms button:hover{background:var(--chip)}
+.rooms button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.rooms button[aria-pressed="true"]{background:var(--chip);font-weight:600}
+.sw{width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,.15)}
+.num{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.ctrl{display:flex;flex-direction:column;gap:12px}
+.seg.kseg{grid-template-columns:1fr 1fr}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{all:unset;text-align:center;padding:8px 4px;cursor:pointer;font-weight:500;font-size:14px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.tog{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px}
+.tog input{accent-color:var(--accent);width:16px;height:16px}
+.toggles{display:flex;gap:18px;flex-wrap:wrap}
+.note{font-size:12.5px;line-height:1.45;color:var(--muted);margin:0;max-width:60ch}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.view{position:relative;min-width:0;min-height:0;background:var(--scene)}
+.view canvas{display:block;width:100%;height:100%;touch-action:none}
+.labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl{position:absolute;transform:translate(-50%,-50%);background:var(--label-bg);border:1px solid var(--line);
+  padding:3px 7px 2px;border-radius:4px;white-space:nowrap;text-align:center;line-height:1.1}
+.lbl .n{font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:.04em;text-transform:uppercase}
+.lbl .a{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.lbl.ctx .n{font-weight:500;color:var(--muted)}
+.sunrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+.sunrow input[type=date]{font:inherit;font-size:13px;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+.compass{position:absolute;right:max(14px,env(safe-area-inset-right,0px));bottom:14px;width:46px;height:46px;border-radius:50%;background:var(--label-bg);border:1px solid var(--line);pointer-events:none}
+.compass svg{width:100%;height:100%}
+.north{position:absolute;right:max(14px,env(safe-area-inset-right,0px));top:14px;font-family:var(--mono);font-size:11px;color:var(--muted);
+  background:var(--label-bg);border:1px solid var(--line);border-radius:4px;padding:4px 8px}
+[hidden]{display:none!important}
+select,input[type=number],input[type=text]{box-sizing:border-box;font:inherit;font-size:14px;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+input[type=number]{font-family:var(--mono);font-size:13px;width:100%}
+.btn{font:inherit;font-size:14px;font-weight:500;color:var(--fg);background:var(--chip);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--danger)}
+.btn.link{background:none;border:0;padding:2px 0;text-decoration:underline;font-size:13px}
+.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.furn-ui{display:flex;flex-direction:column;gap:10px}
+.row2{display:flex;gap:8px;align-items:center}
+.row2>select,.row2>input[type=text]{flex:1}
+.selcard{border:1px solid var(--line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:9px;background:var(--bg)}
+.selcard strong{font-family:var(--display);font-weight:600;font-size:17px;letter-spacing:.03em;text-transform:uppercase}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid2 label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
+.btnrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+input[type=color]{width:38px;height:33px;padding:2px;border:1px solid var(--line);border-radius:6px;background:var(--panel);cursor:pointer}
+.status{font-size:12.5px;color:var(--muted);min-height:1em}.status.err{color:var(--danger)}
+textarea{box-sizing:border-box;width:100%;font-family:var(--mono);font-size:12px;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px;resize:vertical}
+.ro .edit-only{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.walkui{position:absolute;inset:0;pointer-events:none}
+.walkbar{position:absolute;top:12px;left:50%;transform:translateX(-50%);pointer-events:auto;background:var(--label-bg);border:1px solid var(--line);border-radius:8px;
+  padding:6px 6px 6px 12px;display:flex;gap:10px;align-items:center;font-size:13px;max-width:calc(100% - 32px)}
+.joy{position:absolute;left:max(20px,env(safe-area-inset-left,0px));bottom:max(20px,env(safe-area-inset-bottom,0px));width:120px;height:120px;border-radius:50%;
+  background:rgba(20,27,27,.22);border:1px solid rgba(255,255,255,.6);pointer-events:auto;touch-action:none}
+.knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,255,255,.88);box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.cross{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:rgba(255,255,255,.8);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.walk-touch{display:none}
+@media (hover:hover) and (pointer:fine){.joy{display:none}}
+@media (hover:none),(pointer:coarse){.walk-desk{display:none}.walk-touch{display:inline}}
+.loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);font-size:13px}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:1fr auto}
+  .view{order:1}
+  .panel{order:2;max-height:44vh;border-right:0;border-top:1px solid var(--line);
+    padding-block:14px 14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));gap:16px}
+  h1{font-size:30px}
+  .lbl .a{display:none}
+  .lbl .n{font-size:12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel" aria-label="Kontroller">
+    <header>
+      <div class="eyebrow" style="color:#b4412f">DEMO · three.js r170 · Planritning → 3D · LGH 35</div>
+      <h1>Lägenhet 35</h1>
+      <div class="stats"><span><b>79,4</b> m² BOA</span><span><b>3</b> rok</span><span><b>+15</b> m² balkong</span></div>
+    </header>
+
+    <section class="ctrl" aria-label="Visning">
+      <div class="seg kseg" role="group" aria-label="Kök"><button id="kNow" aria-pressed="true">Kök idag</button><button id="kPlan" aria-pressed="false">Kök planerat</button></div>
+      <div class="seg" role="group" aria-label="Vy">
+        <button id="v3d" aria-pressed="true">3D</button>
+        <button id="vplan" aria-pressed="false">Ovanifrån</button>
+        <button id="vrot" aria-pressed="false">Snurra</button>
+      </div>
+      <div>
+        <div class="row"><label for="wallh" class="sec-title" style="margin:0">Vägghöjd</label><span class="num" id="wallhv">2,70 m</span></div>
+        <input id="wallh" type="range" min="0.3" max="2.7" step="0.05" value="2.7">
+      </div>
+      <div class="row2"><button id="walkBtn" class="btn" type="button" aria-pressed="false">Gå runt i lägenheten</button>
+        <label for="walkH" class="hint">Längd</label><input id="walkH" type="number" min="100" max="220" step="1" value="179" style="width:72px"><span class="hint">cm</span></div>
+      <div>
+        <div class="row"><label for="sunT" class="sec-title" style="margin:0">Sol över dygnet</label><span class="num" id="sunV">13:00</span></div>
+        <input id="sunT" type="range" min="0" max="24" step="0.25" value="13">
+        <div class="sunrow"><input id="sunD" type="date" aria-label="Datum"><span></span><button id="sunPlay" class="btn" type="button">Spela dag</button></div>
+        <p class="hint" id="sunInfo" style="margin:6px 0 0"></p>
+      </div>
+      <div class="toggles">
+        <label class="tog"><input id="tFurn" type="checkbox" checked> Möbler</label>
+        <label class="tog"><input id="tLbl" type="checkbox" checked> Rumsnamn</label>
+        <label class="tog"><input id="tEve" type="checkbox"> Tvinga kväll</label>
+      </div>
+    </section>
+
+    <section class="furn-ui" id="furnSec" aria-label="Möblering">
+      <h2 class="sec-title" style="margin:0">Möblering · delad</h2>
+      <div class="row2"><button id="loginBtn" class="btn primary" type="button" hidden>Logga in med Google</button><span id="who" class="hint" hidden>Inloggad som <span id="whoName"></span> · <button id="logoutBtn" class="btn link" type="button">Logga ut</button></span></div>
+      <p class="hint" id="fOff">Ansluter…</p>
+      <div class="furn-ui" id="fOn" hidden>
+        <label class="tog edit-only"><input id="tMove" type="checkbox"> Flytta möbler</label>
+        <button id="seedBtn" class="btn primary" type="button" hidden style="align-self:flex-start">Lägg in startmöbleringen</button>
+        <div class="row2"><label for="layoutSel" class="sr">Variant</label><select id="layoutSel"></select><button id="newLayoutBtn" class="btn edit-only" type="button">Ny variant</button></div>
+        <form id="newLayoutForm" class="row2" hidden><label for="newLayoutName" class="sr">Namn på variant</label><input id="newLayoutName" type="text" placeholder="t.ex. Nytt vardagsrum" maxlength="40" required><button class="btn primary">Skapa</button><button type="button" id="newLayoutCancel" class="btn">Avbryt</button></form>
+        <div class="row2 edit-only"><label for="addType" class="sr">Möbeltyp</label><select id="addType"></select><button id="addBtn" class="btn primary" type="button">Lägg till</button></div>
+        <div id="selCard" class="selcard" hidden>
+          <div class="row"><strong id="selName"></strong><span class="num" id="selPos"></span></div>
+          <div class="grid2 edit-only"><label>Bredd (mm)<input id="selW" type="number" step="10" min="100" max="6000"></label><label>Djup (mm)<input id="selD" type="number" step="10" min="100" max="6000"></label></div>
+          <div class="btnrow edit-only">
+            <button id="rotL" class="btn" type="button" aria-label="Vrid 15 grader">↺ 15°</button>
+            <button id="rotR" class="btn" type="button" aria-label="Vrid 90 grader">↻ 90°</button>
+            <input id="selColor" type="color" aria-label="Färg">
+            <button id="dupBtn" class="btn" type="button">Kopiera</button>
+            <button id="delBtn" class="btn danger" type="button">Ta bort</button>
+          </div>
+        </div>
+        <p class="hint" id="fHint">Rotera och zooma fritt – möblerna ligger still. Klicka på en möbel för att se den. Slå på Flytta möbler för att ändra.</p>
+        <button id="importBtn" class="btn link edit-only" type="button" style="align-self:flex-start">Importera möbler…</button>
+        <form id="importForm" class="furn-ui" hidden><label for="importText" class="hint">Klistra in möbleringen du fått (JSON). Den uppdaterar varianten som är vald nu.</label>
+          <textarea id="importText" rows="6" spellcheck="false" placeholder='{"items":{ … }}'></textarea>
+          <div class="row2"><button class="btn primary">Importera</button><button type="button" id="importCancel" class="btn">Avbryt</button></div></form>
+        <div class="row"><span class="status" id="fStatus" role="status"></span><button id="undoBtn" class="btn link" type="button" hidden>Ångra</button></div>
+        <button id="delLayoutBtn" class="btn link danger edit-only" type="button" style="align-self:flex-start">Ta bort den här varianten</button>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="sec-title">Rum – klicka för att gå in</h2>
+      <ul class="rooms" id="rooms"></ul>
+      <p class="hint" style="margin-top:8px">Klicka på en dörr eller lampa för att öppna/stänga eller tända/släcka. Slå på Kväll för att se lamporna. Dra för att rotera, scrolla/nypa för att zooma, högerklick eller två fingrar för att flytta.</p>
+    </section>
+
+    <p class="note">Geometrin är uppmätt från planritningen, skalad så att bostadsytan blir 79,4 m² och kontrollerad mot robotdammsugarens karta (proportionerna stämmer inom några procent). Köket följer den uppmätta IKEA-ritningen (3160 × 3880 mm). Rumsnamnen följer robotens karta. Räkna med ±10 cm på enskilda mått. Rumsytor är ungefärliga golvytor, takhöjd 2,70 m (uppmätt i köket). Möbleringen sparas i Firebase och delas mellan de konton som finns i Firestore-reglerna.</p>
+  </aside>
+
+  <main class="view" id="view">
+    <div class="loading" id="loading">Laddar 3D-modell…</div>
+    <div class="labels" id="labels"></div>
+    <div class="compass" aria-hidden="true"><svg viewBox="-23 -23 46 46"><g id="compassRot"><path d="M0,-17 L5,0 L0,-3 L-5,0Z" fill="#c0392b"/><path d="M0,17 L5,0 L0,3 L-5,0Z" fill="#8a9593"/><text x="0" y="-8" font-size="0" fill="none">N</text></g></svg></div>
+    <div class="walkui" id="walkUI" hidden>
+      <div class="cross"></div>
+      <div class="walkbar"><span class="walk-desk">W A S D / pilar: gå · Skift: spring · dra: titta · Esc: avsluta</span><span class="walk-touch">Styrspak: gå · dra: titta</span><button id="walkExit" class="btn" type="button">Avsluta</button></div>
+      <div class="joy" id="joy"><div class="knob" id="knob"></div></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+<script type="module">
+import * as T from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
+window.THREE=Object.assign({},T,{OrbitControls,BufferGeometryUtils:{mergeBufferGeometries:mergeGeometries},sRGBEncoding:T.SRGBColorSpace});
+window.MODERN={RoomEnvironment,EffectComposer,RenderPass,GTAOPass,OutputPass};
+const a=document.createElement('script');a.textContent=document.getElementById('appsrc').textContent;document.body.appendChild(a);
+</script>
+<script type="text/plain" id="appsrc">
+(function(){
+if(!window.THREE){document.getElementById('loading').textContent='Kunde inte ladda 3D-biblioteket.';return;}
+const view=document.getElementById('view');
+const H=2.7, CX=4.6, CZ=4.9;
+
+// ---------- renderer / scene ----------
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate=false;
+renderer.localClippingEnabled=true;
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.NeutralToneMapping;renderer.toneMappingExposure=1.0;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+view.prepend(renderer.domElement);
+document.getElementById('loading').remove();
+
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(45,1,0.05,200);
+const controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true; controls.dampingFactor=0.08; controls.maxPolarAngle=Math.PI*0.495; controls.minDistance=0.5; controls.maxDistance=45;
+
+const hemi=new THREE.HemisphereLight(0xffffff,0xd6d6d4,0.75);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xffffff,0.75);
+sun.position.set(-7,14,9); sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);sun.shadow.radius=5;sun.shadow.blurSamples=16;
+Object.assign(sun.shadow.camera,{left:-10,right:10,top:10,bottom:-10,near:1,far:40});
+sun.shadow.bias=-0.0006; sun.shadow.normalBias=0.02;
+scene.add(sun);
+const fill=new THREE.DirectionalLight(0xffffff,0.25); fill.position.set(8,6,-6); scene.add(fill);
+
+const root=new THREE.Group(); root.position.set(-CX,0,-CZ); scene.add(root);
+const walls=new THREE.Group(), furn=new THREE.Group(), fixed=new THREE.Group(), ctx=new THREE.Group();
+root.add(walls,furn,fixed,ctx);
+
+// clipping plane = wall-height cutaway
+const clip=new THREE.Plane(new THREE.Vector3(0,-1,0),H+0.01);
+const C=[clip];
+function M(color,o={}){return new THREE.MeshStandardMaterial(Object.assign({color,roughness:.85,metalness:0,clippingPlanes:C,clipShadows:true},o));}
+const mat={
+  wall:M(0xf3f2ee), poche:new THREE.MeshBasicMaterial({color:0x2b3131,side:THREE.BackSide,clippingPlanes:C}),
+  oak:M(0xffffff,{roughness:.55,map:(()=>{const c=document.createElement('canvas');c.width=1024;c.height=1024;const x=c.getContext('2d');
+     const pw=1024/6;for(let i=0;i<6;i++){for(let j=0;j<4;j++){const off=(i%2)*128+j*256,h=40+((i*7+j*13)%9)*3;x.fillStyle=`hsl(${32+((i*3+j)%2)},38%,${62+((i*5+j*3)%4)*.8}%)`;x.fillRect(i*pw,(off)%1024,pw,256);x.fillRect(i*pw,(off-1024),pw,256);
+       for(let k=0;k<60;k++){x.strokeStyle=`rgba(110,70,35,${.03+((k*7)%5)*.008})`;x.beginPath();const xx=i*pw+((k*37)%pw);x.moveTo(xx,(off)%1024);x.bezierCurveTo(xx+6,(off+80)%1024,xx-6,(off+170)%1024,xx+2,(off+256)%1024);x.stroke();}}
+       x.fillStyle='rgba(80,55,30,.18)';x.fillRect(i*pw,0,1.2,1024);}
+     for(let j=0;j<24;j++){x.fillStyle='rgba(80,55,30,.15)';x.fillRect(((j%6))*pw,((j*256+(j%2)*128))%1024,pw,1.5);}
+     const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;return t;})()}), tile:M(0xc7cbcc,{roughness:.6}), slab:M(0x9aa09f), deck:M(0x8a7a66,{roughness:.9}),
+  white:M(0xf7f7f5,{roughness:.5}), black:M(0x1f2222,{roughness:.4}), steel:M(0xb8bcbd,{roughness:.3,metalness:.6}),
+  ceramic:M(0xffffff,{roughness:.25}), counter:M(0x3a3d3d,{roughness:.45}), wood:M(0x9b7350,{roughness:.6}), darkwood:M(0x5d4636),
+  sofa:M(0x6f8a86), textile:M(0x8b9db0), linen:M(0xece9e2), duvet:M(0xb6c4c9), rug:M(0xb9b0a1,{roughness:1}), rug2:M(0x7f8f88,{roughness:1}),
+  frame:M(0xe9ebea,{roughness:.4}), glass:new THREE.MeshPhysicalMaterial({color:0xbfe0ea,transparent:true,opacity:.28,roughness:.05,clippingPlanes:C,depthWrite:false}),
+  frost:new THREE.MeshPhysicalMaterial({color:0xe8eef0,transparent:true,opacity:.7,roughness:.6,clippingPlanes:C}),
+  leaf:M(0xfafaf8,{roughness:.5}), plant:M(0x4f7a4a), pot:M(0xc9c4ba), ctx:M(0xd2d6d5), ctx2:M(0xbfc5c3), rail:M(0x4a5050,{roughness:.4,metalness:.4}),
+  screen:M(0x111414,{roughness:.2}), cushion:M(0x5d7370), mustard:M(0xc29a4b),
+  kfront:M(0xb2b4b1,{roughness:.5}), kstone:M(0x3a3c3d,{roughness:.6}), greydoor:M(0xa9aaa5,{roughness:.45}), pink:M(0xc9a19a,{roughness:.9}),
+  pine:M(0xc98f4e,{roughness:.6}), birch:M(0xd9a96b,{roughness:.55}), marble:M(0xeeeeec,{roughness:.25}), webbing:M(0xe8e1d2,{roughness:.9}), speakerblk:M(0x1d1f20,{roughness:.6}), kplinth:M(0xf1f0ec,{roughness:.6}),
+  inox:M(0xb4b6b4,{roughness:.32,metalness:.55}), glassblk:M(0x16191a,{roughness:.15}), led:new THREE.MeshBasicMaterial({color:0xffe2b0,clippingPlanes:C}),
+  landsk:M(0x55595a,{roughness:.95}), fridge:M(0x9a9d9d,{roughness:.33,metalness:.5}), cupdoor:M(0xdcdbd6,{roughness:.5}),
+  teak:M(0xa5642c,{roughness:.55}), laminate:M(0xdddcd5,{roughness:.6}), mint:M(0x9fcfca,{roughness:.5}), sheep:M(0x5f5a55,{roughness:1})
+};
+
+// ---------- performance: one shared unit box, scaled per mesh; shared cylinders; static merging ----------
+const UNIT_BOX=new THREE.BoxGeometry(1,1,1),CYL_CACHE=new Map();let shadowDirty=true;const markShadow=()=>{shadowDirty=true;};
+function box(x0,x1,y0,y1,z0,z1,m,parent=fixed,cast=true){
+  const me=new THREE.Mesh(UNIT_BOX,m); me.scale.set(Math.max(1e-4,Math.abs(x1-x0)),Math.max(1e-4,Math.abs(y1-y0)),Math.max(1e-4,Math.abs(z1-z0)));me.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);
+  me.castShadow=cast; me.receiveShadow=true; parent.add(me); return me;}
+function cyl(x,z,r,y0,y1,m,parent=fixed,seg=24){const ck=r.toFixed(4)+'|'+(y1-y0).toFixed(4)+'|'+seg;let cg=CYL_CACHE.get(ck);if(!cg){cg=new THREE.CylinderGeometry(r,r,y1-y0,seg);CYL_CACHE.set(ck,cg);}const me=new THREE.Mesh(cg,m);
+  me.position.set(x,(y0+y1)/2,z); me.castShadow=true; me.receiveShadow=true; parent.add(me); return me;}
+function mergeMeshes(root,meshes){ // meshes: descendants of root; root's own transform is ignored
+  const buckets=new Map(),inv=new THREE.Matrix4().copy(root.matrixWorld).invert(),mtx=new THREE.Matrix4();
+  for(const o of meshes){const k=o.material.uuid+'|'+(o.castShadow?1:0)+(o.receiveShadow?1:0);let b=buckets.get(k);if(!b)buckets.set(k,b={mat:o.material,cast:o.castShadow,recv:o.receiveShadow,geos:[]});
+    mtx.multiplyMatrices(inv,o.matrixWorld);let g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();g.applyMatrix4(mtx);
+    for(const n of Object.keys(g.attributes))if(!['position','normal','uv'].includes(n))g.deleteAttribute(n);if(!g.attributes.uv)g.setAttribute('uv',new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count*2),2));
+    g.clearGroups();b.geos.push(g);o.parent.remove(o);}
+  for(const b of buckets.values()){const mg=THREE.BufferGeometryUtils.mergeBufferGeometries(b.geos,false);for(const g of b.geos)g.dispose();if(!mg)continue;
+    const me=new THREE.Mesh(mg,b.mat);me.castShadow=b.cast;me.receiveShadow=b.recv;me.userData.merged=true;root.add(me);}}
+function mergeable(o){return o.isMesh&&!o.userData.noMerge&&o.userData.doorIdx===undefined&&o.userData.lampKey===undefined&&!(o.material.transparent);}
+let STATIC_BOXES=[];
+function freezeStatic(){const b=new THREE.Box3();STATIC_BOXES=[];scene.updateMatrixWorld(true);
+  const add=o=>{if(o.material===mat.poche||o.isLight||o.userData.isDoorPivot)return;b.setFromObject(o);if(b.isEmpty())return;if(b.min.y<0.5&&b.max.y>0.3)STATIC_BOXES.push([b.min.x,b.max.x,b.min.z,b.max.z]);};
+  walls.children.forEach(add);fixed.children.forEach(add);ctx.children.forEach(add);
+  for(const grp of[walls,fixed,ctx])mergeMeshes(grp,grp.children.filter(mergeable));markShadow();}
+function wallBox(x0,x1,y0,y1,z0,z1){
+  const m=box(x0,x1,y0,y1,z0,z1,mat.wall,walls);
+  const b=new THREE.Mesh(m.geometry,mat.poche); b.position.copy(m.position); b.scale.copy(m.scale); walls.add(b);}
+
+// ---------- walls with openings ----------
+// axis 'x': wall runs along x (from→to), thickness spans z t0..t1. axis 'z': runs along z, thickness spans x t0..t1.
+function wallRun(axis,from,to,t0,t1,ops=[]){
+  ops=ops.slice().sort((p,q)=>p.a-q.a); let cur=from;
+  const seg=(a,b,y0,y1)=>{ if(b-a<1e-3||y1-y0<1e-3)return; axis==='x'?wallBox(a,b,y0,y1,t0,t1):wallBox(t0,t1,y0,y1,a,b);};
+  for(const o of ops){ const y0=o.y0||0, y1=o.y1||2.1;
+    seg(cur,o.a,0,H); seg(o.a,o.b,0,y0); seg(o.a,o.b,y1,H); cur=o.b; opening(axis,o,t0,t1,y0,y1);}
+  seg(cur,to,0,H);}
+// place a box given along/across coords
+function ab(axis,a0,a1,y0,y1,c0,c1,m,parent=walls){return axis==='x'?box(a0,a1,y0,y1,c0,c1,m,parent):box(c0,c1,y0,y1,a0,a1,m,parent);}
+const doors=[];
+function opening(axis,o,t0,t1,y0,y1){
+  const mid=(t0+t1)/2, f=0.05;
+  if(o.type==='win'||o.type==='french'){
+    // frame
+    ab(axis,o.a,o.b,y0,y0+f,mid-0.04,mid+0.04,mat.frame); ab(axis,o.a,o.b,y1-f,y1,mid-0.04,mid+0.04,mat.frame);
+    ab(axis,o.a,o.a+f,y0,y1,mid-0.04,mid+0.04,mat.frame); ab(axis,o.b-f,o.b,y0,y1,mid-0.04,mid+0.04,mat.frame);
+    if(o.mull) ab(axis,(o.a+o.b)/2-0.03,(o.a+o.b)/2+0.03,y0,y1,mid-0.04,mid+0.04,mat.frame);
+    const g=ab(axis,o.a+f,o.b-f,y0+f,y1-f,mid-0.01,mid+0.01,o.frost?mat.frost:mat.glass); g.castShadow=false;
+    if(y0>0.2) ab(axis,o.a-0.03,o.b+0.03,y0-0.02,y0,t0-0.03,t1+0.03,mat.white); // sill
+  }
+  if(o.type==='door'||o.type==='glassdoor'){
+    const w=o.b-o.a, hx=o.hinge==='b'?o.b:o.a, dir=o.hinge==='b'?-1:1;
+    const face=o.side>0?t1:t0, ang=(o.open??80)*Math.PI/180;
+    // casing
+    ab(axis,o.a-0.05,o.a,0,y1+0.05,t0-0.01,t1+0.01,mat.frame); ab(axis,o.b,o.b+0.05,0,y1+0.05,t0-0.01,t1+0.01,mat.frame);
+    ab(axis,o.a-0.05,o.b+0.05,y1,y1+0.05,t0-0.01,t1+0.01,mat.frame);
+    // leaf on a pivot at the hinge
+    const piv=new THREE.Group();
+    if(axis==='x') piv.position.set(hx,0,face); else piv.position.set(face,0,hx);
+    piv.userData.isDoorPivot=true;walls.add(piv);
+    const lw=w-0.02, th=0.04, lm=o.type==='glassdoor'?mat.glass:mat.leaf;
+    const leaf=new THREE.Mesh(new THREE.BoxGeometry(lw,y1-0.01,th),lm);
+    leaf.castShadow=o.type!=='glassdoor'; leaf.position.set(dir*lw/2,(y1-0.01)/2,o.side*th/2);
+    const lg=new THREE.Group(); lg.add(leaf);
+    if(o.type==='glassdoor'){ // frame around the glass
+      const fr=(x0,x1,ya,yb)=>{const b=new THREE.Mesh(new THREE.BoxGeometry(Math.abs(x1-x0),yb-ya,th+0.01),mat.frame);b.position.set(dir*(x0+x1)/2,(ya+yb)/2,o.side*th/2);lg.add(b);};
+      fr(0,0.07,0,y1);fr(lw-0.07,lw,0,y1);fr(0,lw,0,0.1);fr(0,lw,y1-0.08,y1-0.01);
+    } else { const hd=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.02,0.06),mat.steel); hd.position.set(dir*(lw-0.08),1.0,o.side*(th+0.03)); lg.add(hd);}
+    // rotate: base frame for axis x = leaf along +x*dir in wall plane; swing toward side
+    let base=axis==='x'?0:-Math.PI/2; // for 'z', local x maps to +z
+    const kk=(-o.side*dir)*(axis==='x'?1:-1),D={lg,base,kk,ang,cur:o.closed?0:1,tgt:o.closed?0:1,id:axis+o.a.toFixed(2)};
+    try{const v=localStorage.getItem('lgh35-door-'+D.id);if(v!==null)D.cur=D.tgt=+v;}catch(e){}
+    lg.rotation.y=base+kk*ang*D.cur;lg.traverse(m=>{m.userData.doorIdx=doors.length;});doors.push(D);
+    piv.add(lg);
+  }
+}
+
+// exterior & party walls (thick), interior walls 0.1 m
+wallRun('x',-0.3,5.06,-0.25,0);                                         // party wall to neighbour (north)
+wallBox(5.06,5.72,0,H,-0.25,1.92);                                        // installation shaft
+wallRun('x',5.72,7.8,0.59,0.84,[{a:6.0,b:6.9,type:'door',hinge:'a',side:-1,open:70}]); // entrance
+wallRun('z',0.59,3.78,7.55,7.8);                                          // hall / lift shaft
+wallRun('x',7.55,10.13,3.53,3.78);                                        // bedroom 2 / lift shaft
+wallRun('z',3.53,10.27,9.78,10.13,[{a:4.95,b:6.35,type:'win',y0:.8,y1:2.15,mull:1},{a:7.7,b:9.15,type:'win',y0:.8,y1:2.15,mull:1}]);
+wallRun('x',1.26,10.13,10.02,10.27);                                      // party wall (south)
+wallRun('z',5.16,10.02,1.26,1.56,[{a:5.49,b:6.34,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:88},{a:6.45,b:8.6,type:'win',y0:.45,y1:2.15,mull:1}]);
+wallRun('x',-0.3,1.26,5.16,5.46);                                        // kitchen south (exterior, toward balcony)
+wallRun('x',1.56,2.64,5.16,5.26,[{a:1.66,b:2.56,type:'open',y1:2.1}]); // kitchen – living room: sliding pocket door (open)
+wallRun('x',2.64,3.88,5.16,5.26);                                        // closed wall behind the colour-block cabinet (photo)
+wallRun('z',2.0,2.66,3.88,3.98);                                          // stub kitchen / smyg (IKEA plan)
+wallRun('z',-0.25,5.46,-0.3,0,[{a:1.0,b:1.85,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:88},{a:2.63,b:3.5,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:88},{a:4.5,b:5.12,type:'win',y0:.85,y1:2.2}]);
+wallRun('x',0,5.06,1.9,2.0,[{a:4.13,b:4.91,type:'door',hinge:'b',side:1,open:85}]); // bath/WC – kitchen
+wallRun('z',0,1.9,3.115,3.23,[{a:.7,b:1.5,type:'open'}]);                 // bath – WC (sliding door)
+box(3.085,3.115,0,2.05,1.45,2.0,mat.leaf,walls);                    // slid-open door panel
+wallRun('x',5.72,7.55,3.02,3.12,[{a:6.0,b:6.75,type:'door',hinge:'a',side:-1,open:80,closed:1}]); // walk-in closet
+wallRun('x',5.67,7.55,4.51,4.61);
+wallRun('z',3.78,4.51,7.55,7.65);
+wallRun('z',3.02,10.02,5.67,5.77,[{a:4.65,b:5.45,type:'door',hinge:'a',side:1,open:85},{a:6.85,b:7.65,type:'door',hinge:'a',side:1,open:85}]);
+wallRun('x',5.77,9.78,6.45,6.62);
+
+// French balcony rail
+box(-1.37,-0.3,0,1.8,-0.27,-0.23,mat.frost,ctx); // balcony divider to neighbour
+
+// ---------- floors ----------
+box(-0.3,10.13,-0.22,-0.0,-0.25,10.27,mat.slab,ctx,false);
+function gridTex(bg,grout,lw){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle=bg;x.fillRect(0,0,256,256);
+  x.strokeStyle=grout;x.lineWidth=lw;for(let i=0;i<=256;i+=32){x.beginPath();x.moveTo(i,0);x.lineTo(i,256);x.stroke();x.beginPath();x.moveTo(0,i);x.lineTo(256,i);x.stroke();}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;}
+const floorTileTex=gridTex('#e4dfd8','#cbc3b8',3), wallTileTex=gridTex('#f6f5f2','#cfcbc4',3);
+function texMat(base,w,h,size,o){const t=base.clone();t.needsUpdate=true;t.repeat.set(w/size,h/size);return M(0xffffff,Object.assign({map:t},o||{}));}
+const rooms=[
+ {id:'vard',name:'Vardagsrummet',r:[[1.56,5.67,5.16,10.02]],floor:'oak',lab:[3.6,6.4],eye:[5.3,5.55],look:[1.9,9.7],col:'#c9a27a'},
+ {id:'kok',name:'Köket',r:[[0,3.88,2.0,5.16]],floor:'oak',lab:[1.9,2.95],eye:[0.35,2.75],look:[3.3,4.5],col:'#d8bb92'},
+ {id:'smyg',name:'Smyg',r:[[3.88,5.67,2.0,5.16]],floor:'oak',lab:[4.9,3.3],eye:[4.6,5.1],look:[6.6,1.2],col:'#e4a98f'},
+ {id:'sov1',name:'Sovrum',r:[[5.77,9.78,6.62,10.02]],floor:'oak',lab:[8.0,9.35],eye:[6.1,6.95],look:[9.6,9.8],col:'#b08a63'},
+ {id:'sov2',name:'Rosas rum',r:[[5.77,9.78,4.61,6.45],[7.8,9.78,3.78,4.61]],floor:'oak',lab:[7.1,5.4],eye:[6.6,5.65],look:[9.4,4.3],col:'#bf9b72'},
+ {id:'bad',name:'Badrum',r:[[0,3.115,0,1.9]],floor:'tile',lab:[1.2,1.25],eye:[2.95,1.75],look:[0.2,0.2],col:'#c7cbcc'},
+ {id:'wc',name:'WC',r:[[3.23,5.06,0,1.9]],floor:'tile',lab:[4.4,1.2],eye:[4.85,1.75],look:[3.35,0.2],col:'#b5babb'},
+ {id:'hall',name:'Hall',r:[[5.72,7.55,0.84,3.02]],floor:'oak',lab:[6.5,1.7],eye:[6.4,2.95],look:[6.5,0.85],col:'#e0c8a6'},
+ {id:'klk',name:'Klädkammare',r:[[5.77,7.55,3.12,4.51]],floor:'oak',lab:[6.75,3.75],eye:[6.35,3.2],look:[7.4,4.45],col:'#a8835e'},
+ {id:'balk',name:'Balkong',r:[[-1.35,1.26,5.46,9.06],[-1.35,-0.3,-0.25,5.46]],floor:'deck',lab:[0.0,7.0],eye:[-1.1,8.8],look:[0.6,4.0],col:'#8a7a66',outside:1}
+];
+for(const rm of rooms){ rm.area=rm.r.reduce((s,q)=>s+(q[1]-q[0])*(q[3]-q[2]),0);
+  for(const q of rm.r){ if(rm.outside) box(q[0],q[1],-0.15,-0.05,q[2],q[3],mat.deck,ctx,false);
+    else box(q[0],q[1],0,0.012,q[2],q[3],rm.floor==='tile'?texMat(floorTileTex,q[1]-q[0],q[3]-q[2],1.6,{roughness:.5}):mat[rm.floor],ctx,false);}}
+// balcony railing
+const perf=M(0xf2f2f0,{roughness:.6,transparent:true,opacity:.82});box(-1.38,-1.35,0,1.0,-0.25,9.08,perf,ctx,false); box(-1.4,-1.33,1.06,1.1,-0.25,9.08,mat.rail,ctx);
+box(-1.38,1.26,0,1.0,9.04,9.08,perf,ctx,false); box(-1.4,1.26,1.06,1.1,9.02,9.1,mat.rail,ctx);
+// context: stairwell + lift shaft
+box(5.72,7.8,-0.2,0.0,-1.9,0.59,mat.ctx,ctx,false); box(7.8,10.13,-0.2,0.6,-0.6,3.53,mat.ctx2,ctx);
+const ctxLabels=[{name:'Trapphus',p:[6.7,-0.8]},{name:'Hisschakt',p:[9.0,1.5]}];
+
+// ---------- lamps: click a lamp to switch it on/off (remembered per browser) ----------
+const lamps=new Map();let EVE=false,DARK=false;
+function glowMat(col,base){return new THREE.MeshStandardMaterial({color:base??col,emissive:col,emissiveIntensity:0,roughness:.55,clippingPlanes:C,side:THREE.DoubleSide});}
+function setLamp(L,on){L.on=on;const v=DARK;L.light.visible=v;L.light.intensity=on?L.int0:0;if(L.extra)for(const l of L.extra){l.visible=v;l.intensity=on?l.userData.int0:0;}for(const m of L.mats)m.emissiveIntensity=on?L.glow:0;}
+function regLamp(key,parent,pos,col,int,dist,mats,glow=1){col=new THREE.Color(col).lerp(new THREE.Color(0xffffff),.55);const light=new THREE.PointLight(col,int*.7*Math.PI*2.2,dist,2);light.position.set(pos[0],pos[1],pos[2]);parent.add(light);
+  const L={key,light,mats,glow,on:true,int0:light.intensity};lamps.set(key,L);parent.userData.lampKey=key;parent.traverse(o=>{if(o.isMesh&&mats.includes(o.material))o.userData.lampKey=key;});
+  let on=true;try{const v=localStorage.getItem('lgh35-lamp-'+key);if(v!==null)on=v==='1';}catch(e){}setLamp(L,on);return L;}
+function tagLamp(key,...meshes){for(const m of meshes)m.userData.lampKey=key;}
+const WARM=0xffd6a0;
+function cord(g,x,z,y0,y1,parent){const c=cyl(x,z,.004,y0,y1,mat.black,parent);c.castShadow=false;return c;}
+function ceilLamp(key,kind,x,z,top){const g=new THREE.Group();fixed.add(g);top=top||H;const blk=mat.black;let mats=[],ly=2.0,int=1.1,dist=6;
+  if(kind==='bulb'){cord(g,x,z,2.2,top,g);cyl(x,z,.022,2.12,2.22,blk,g);const m=glowMat(0xffc27a,0x6d6a66);const b=new THREE.Mesh(new THREE.SphereGeometry(.065,20,14),m);b.position.set(x,2.05,z);g.add(b);mats=[m];ly=2.0;
+    cyl(x,z,.05,top-.04,top,blk,g);}
+  if(kind==='globe'){cord(g,x,z,2.25,top,g);cyl(x,z,.03,2.18,2.28,blk,g);const gl=new THREE.Mesh(new THREE.SphereGeometry(.15,24,18),mat.glass);gl.position.set(x,2.05,z);g.add(gl);
+    const m=glowMat(0xffc27a,0xb59a70);const b=new THREE.Mesh(new THREE.SphereGeometry(.035,14,10),m);b.position.set(x,2.08,z);g.add(b);mats=[m];cyl(x,z,.05,top-.04,top,blk,g);}
+  if(kind==='cone'){cord(g,x,z,2.25,top,g);cyl(x,z,.06,top-.04,top,mat.white,g);const sh=new THREE.Mesh(new THREE.ConeGeometry(.19,.24,32,1,true),mat.white);sh.material.side=THREE.DoubleSide;sh.position.set(x,2.13,z);g.add(sh);
+    const m=glowMat(0xfff1dc,0xf2f2f0);const d=new THREE.Mesh(new THREE.CircleGeometry(.185,32),m);d.rotation.x=Math.PI/2;d.position.set(x,2.012,z);g.add(d);mats=[m];ly=1.95;int=1.2;}
+  if(kind==='spot3'){cyl(x,z,.12,top-.03,top,mat.steel,g);const m=glowMat(0xfff4e6,0xdedede);for(let k=0;k<3;k++){const a=k*2.1;const sp=cyl(x+Math.sin(a)*.07,z+Math.cos(a)*.07,.035,top-.16,top-.04,mat.steel,g);
+      const lens=new THREE.Mesh(new THREE.CircleGeometry(.03,16),m);lens.rotation.x=Math.PI/2;lens.position.set(x+Math.sin(a)*.07,top-.161,z+Math.cos(a)*.07);g.add(lens);}mats=[m];ly=top-.3;int=1.0;}
+  if(kind==='plafond'){const m=glowMat(0xffffff,0xf4f4f4);const p=new THREE.Mesh(new THREE.SphereGeometry(.17,28,10,0,Math.PI*2,Math.PI/2,Math.PI/2),m);p.scale.y=.45;p.position.set(x,top,z);g.add(p);
+    cyl(x,z,.18,top-.012,top,mat.steel,g);mats=[m];ly=top-.25;int=.9;dist=4;}
+  if(kind==='paper'){cord(g,x,z,2.25,top,g);const m=glowMat(0xffb36b,0xf0c9a0);const p=new THREE.Mesh(new THREE.SphereGeometry(.2,24,18),m);p.position.set(x,2.1,z);g.add(p);mats=[m];ly=2.05;int=.9;dist=5;}
+  if(kind==='flowerpot'){cord(g,x,z,2.25,top,g);cyl(x,z,.04,top-.03,top,mat.white,g);const sm=M(0xe8b07e,{roughness:.35});
+    const sh=new THREE.Mesh(new THREE.SphereGeometry(.2,28,14,0,Math.PI*2,0,Math.PI/2),sm);sh.material.side=THREE.DoubleSide;sh.position.set(x,2.05,z);g.add(sh);
+    const m=glowMat(0xfff0d8,0xf2ede4);const b=new THREE.Mesh(new THREE.SphereGeometry(.08,18,12),m);b.position.set(x,2.03,z);g.add(b);mats=[m];ly=1.95;int=1.0;dist=5;}
+  regLamp(key,g,[x,ly,z],WARM,int,dist,mats);}
+
+// Kitchen — positions from the measured IKEA plan, look from Henrik's photo
+// counter wall at z=2.0, run from the window (x=0) to the smyg (x=3.88); fronts at z=2.60
+const KZ0=2.0,KZ1=2.6,KF=2.618;
+function kfront(x0,x1,y0,y1,handle){const g=.0015;box(x0+g,x1-g,y0+g,y1-g,KZ1,KF,mat.kfront);
+  if(handle){const hw=Math.min(.32,(x1-x0)*.6),cx=(x0+x1)/2,hy=handle==='top'?y1-.05:y0+.05;
+    box(cx-hw/2,cx+hw/2,hy-.006,hy+.006,KF+.018,KF+.03,mat.steel);box(cx-hw/2,cx-hw/2+.012,hy-.006,hy+.006,KF,KF+.03,mat.steel);box(cx+hw/2-.012,cx+hw/2,hy-.006,hy+.006,KF,KF+.03,mat.steel);}}
+function kdrawers(x0,x1,parts){const tot=parts.reduce((a,b)=>a+b,0);let y=.1;for(const p of parts){const h=.76*p/tot;kfront(x0,x1,y,y+h,'top');y+=h;}}
+// carcass, plinth, worktop, backsplash
+box(0.0,3.88,0,.1,KZ0,KZ1-.06,mat.kplinth);
+box(0.0,2.66,.1,.86,KZ0,KZ1,mat.kplinth); box(3.26,3.88,.1,.86,KZ0,KZ1,mat.kplinth);
+box(0.0,3.88,.86,.9,KZ0,2.635,mat.kstone);
+const tileTex=(()=>{const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle='#f3f3f1';x.fillRect(0,0,256,256);
+  x.strokeStyle='#c9cac6';x.lineWidth=3;for(let i=0;i<=256;i+=32){x.beginPath();x.moveTo(i,0);x.lineTo(i,256);x.stroke();x.beginPath();x.moveTo(0,i);x.lineTo(256,i);x.stroke();}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(3.88/1.2,.55/1.2);return t;})();
+mat.ktile=M(0xffffff,{map:tileTex,roughness:.35});
+const bsTiles=box(0.0,3.88,.9,1.45,KZ0,KZ0+.012,mat.ktile);bsTiles.userData.noMerge=true;          // today: 15x15 white tiles up to the wall cabinets
+const bsUp=box(0.0,3.88,.9,1.1,KZ0,KZ0+.02,mat.kstone);bsUp.userData.noMerge=true;               // planned: 20 cm LOCKEBO upstand
+const KITCHEN={now:{front:0xb2b4b1,stone:0x3a3c3d,tiles:true},plan:{front:0xcfc8b8,stone:0x7d7064,tiles:false}};
+function applyKitchen(k){markShadow();const c=KITCHEN[k]||KITCHEN.now;mat.kfront.color.setHex(c.front);mat.kstone.color.setHex(c.stone);bsTiles.visible=c.tiles;bsUp.visible=!c.tiles;
+  const a=document.getElementById('kNow'),b=document.getElementById('kPlan');if(a&&b){a.setAttribute('aria-pressed',String(k!=='plan'));b.setAttribute('aria-pressed',String(k==='plan'));}
+  try{localStorage.setItem('lgh35-kitchen',k);}catch(e){}}
+// base run (left → right): drawers 40, dishwasher 60, sink 80, drawers 40+40, range 60, drawers 60
+box(0.0,.06,.1,.86,KZ1,KF,mat.kfront);                                   // filler at window
+kdrawers(.06,.46,[1,1,1,1,1]);
+box(.465,1.055,.1,.86,KZ1,KF+.004,mat.inox); box(.465,1.055,.80,.86,KF+.004,KF+.006,mat.glassblk); // dishwasher
+box(.56,.96,.74,.752,KF+.02,KF+.032,mat.steel);
+kfront(1.06,1.46,.1,.86,'top'); kfront(1.46,1.86,.1,.86,'top');           // sink cabinet
+kdrawers(1.86,2.26,[.8,1.1,1.1]); kdrawers(2.26,2.66,[.8,1.1,1.1]);
+kdrawers(3.26,3.88,[1,1,1]);
+// double sink + tall mixer
+box(1.13,1.43,.885,.902,2.13,2.5,mat.inox); box(1.49,1.79,.885,.902,2.13,2.5,mat.inox);
+cyl(1.46,2.08,.025,.9,.96,mat.inox); cyl(1.46,2.08,.012,.96,1.30,mat.inox);
+box(1.448,1.472,1.285,1.305,2.08,2.30,mat.inox); cyl(1.46,2.29,.011,1.20,1.30,mat.inox);
+// freestanding range (SMEG-type, 60 cm) on legs
+box(2.665,3.255,.1,.9,KZ0+.02,KZ1+.02,mat.inox);
+for(const lx of[2.71,3.21])for(const lz of[2.1,2.55])cyl(lx,lz,.018,0,.1,mat.inox);
+box(2.70,3.22,.18,.66,KZ1+.02,KZ1+.026,mat.glassblk);                   // oven door glass
+box(2.72,3.20,.70,.712,KZ1+.04,KZ1+.052,mat.inox);                       // oven handle
+box(2.665,3.255,.76,.9,KZ1+.02,KZ1+.03,mat.inox);
+for(let k=0;k<5;k++)cyl(2.74+k*.11,KZ1+.04,.018,.82,.84,mat.black).rotation.x=Math.PI/2;
+box(2.68,3.24,.9,.912,KZ0+.04,KZ1,mat.glassblk);                        // ceramic hob
+// wall cabinets (bottom 1.45, top 2.35 – estimated from the photo)
+const UZ1=KZ0+.37,UB=1.45,UT=2.35;
+box(0,2.36,UB,UT,KZ0,UZ1-.018,mat.kplinth); box(3.26,3.88,UB,UT,KZ0,UZ1-.018,mat.kplinth);
+{const n=6,w=2.36/n;for(let k=0;k<n;k++){const x0=k*w,x1=x0+w,g=.0015;box(x0+g,x1-g,UB+g,UT-g,UZ1-.018,UZ1,mat.kfront);
+  const cx=k%2===0?x1-.06:x0+.06;box(cx-.15,cx+.15,UB+.05-.006,UB+.05+.006,UZ1+.012,UZ1+.024,mat.steel);}}
+box(3.261,3.879,UB+.0015,UT-.0015,UZ1-.018,UZ1,mat.kfront); box(3.42,3.72,UB+.044,UB+.056,UZ1+.012,UZ1+.024,mat.steel);
+// open niche with shelves next to the hood
+box(2.36,2.66,UB,UT,KZ0,KZ0+.015,mat.kplinth); box(2.36,2.375,UB,UT,KZ0,UZ1,mat.kplinth); box(2.645,2.66,UB,UT,KZ0,UZ1,mat.kplinth);
+for(const y of[UB,1.75,2.05,UT-.015])box(2.375,2.645,y,y+.015,KZ0,UZ1,mat.kplinth);
+// short cabinet above a slim pull-out hood
+box(2.66,3.26,1.88,UT,KZ0,UZ1-.018,mat.kplinth); box(2.6615,3.2585,1.8815,UT-.0015,UZ1-.018,UZ1,mat.kfront);
+box(2.81,3.11,1.924,1.936,UZ1+.012,UZ1+.024,mat.steel);
+box(2.67,3.25,1.80,1.88,KZ0,UZ1+.02,mat.inox);
+// LED strip under the wall cabinets + warm fill light on the worktop
+{const g=new THREE.Group();fixed.add(g);const m=glowMat(0xffe2b0,0xd8d4cc);for(const [a,b] of [[0,2.36],[3.26,3.88]]) box(a+.02,b-.02,UB-.006,UB,UZ1-.06,UZ1-.03,m,g,false);
+ const L=regLamp('kitchen-led',g,[1.6,1.38,2.3],0xffd9a0,.45,2.2,[m]);for(const x of[.5,3.55]){const l2=new THREE.PointLight(0xffeedd,.2,1.6,2);l2.userData.int0=.2;l2.position.set(x,1.38,2.3);g.add(l2);L.extra=(L.extra||[]).concat(l2);}}
+{const g=new THREE.Group();fixed.add(g);const m=glowMat(0xffffff,0xcfd2d2);box(2.84,3.08,1.795,1.8,2.2,2.24,m,g,false);regLamp('hood',g,[2.96,1.68,2.3],0xffffff,.5,1.4,[m]);}
+// ceiling lamps (photos)
+ceilLamp('vard-tak','bulb',3.6,7.6);ceilLamp('sov-tak','globe',7.78,8.3);ceilLamp('hall-tak','cone',6.62,1.95);
+ceilLamp('kok-spot','spot3',1.95,3.1);ceilLamp('smyg-spot','spot3',4.35,3.55);ceilLamp('rosa-tak','flowerpot',7.8,5.35);
+ceilLamp('wc-tak','plafond',4.15,.95,2.45);ceilLamp('bad-tvatt','plafond',2.45,.95,2.45);ceilLamp('bad-dusch','plafond',.82,.9,2.45);
+// Fridge/freezer block (from photo): footprint x 2.64..3.88, z 3.79..5.16
+// white column to the ceiling at the kitchen corner, fridge facing the counter (north),
+// freezer facing the kitchen (west), cupboard facing the living room (south)
+box(2.64,3.28,0,H,3.79,4.42,mat.wall,walls);
+const AP=1.85;
+function appliance(x0,x1,z0,z1,face,handleAt){
+  box(x0+.01,x1-.01,.09,AP,z0+.01,z1-.01,mat.fridge);
+  if(face==='n'){box(x0+.04,x1-.04,0,.09,z0+.06,z1-.02,mat.counter);box(x0+.01,x1-.01,AP-.09,AP,z0+.005,z0+.03,mat.counter);
+    box(handleAt-.012,handleAt+.012,.85,1.3,z0-.04,z0-.015,mat.steel);box(handleAt-.012,handleAt+.012,.85,.87,z0-.04,z0+.01,mat.steel);box(handleAt-.012,handleAt+.012,1.28,1.3,z0-.04,z0+.01,mat.steel);}
+  else{box(x0+.06,x1-.02,0,.09,z0+.04,z1-.04,mat.counter);box(x0+.005,x0+.03,AP-.09,AP,z0+.01,z1-.01,mat.counter);
+    box(x0-.04,x0-.015,.85,1.3,handleAt-.012,handleAt+.012,mat.steel);box(x0-.04,x0+.01,.85,.87,handleAt-.012,handleAt+.012,mat.steel);box(x0-.04,x0+.01,1.28,1.3,handleAt-.012,handleAt+.012,mat.steel);}}
+function grilleAndTop(x0,x1,z0,z1,face){ // ventilation grille 1.85-2.0, cupboard 2.0-ceiling
+  const fz=face==='n'?z0:x0;
+  if(face==='n'){box(x0,x1,AP,2.0,z0+.04,z1,mat.kplinth);for(let y=AP+.025;y<2.0;y+=.03)box(x0+.02,x1-.02,y,y+.012,z0+.02,z0+.04,mat.white);
+    box(x0,x1,2.0,H,z0+.02,z1,mat.kplinth);box(x0+.002,x1-.002,2.002,H-.002,z0,z0+.02,mat.cupdoor);box(x0+.15,x1-.15,2.05,2.062,z0-.03,z0,mat.steel);}
+  else{box(x0+.04,x1,AP,2.0,z0,z1,mat.kplinth);for(let y=AP+.025;y<2.0;y+=.03)box(x0+.02,x0+.04,y,y+.012,z0+.02,z1-.02,mat.white);
+    box(x0+.02,x1,2.0,H,z0,z1,mat.kplinth);box(x0,x0+.02,2.002,H-.002,z0+.002,z1-.002,mat.cupdoor);box(x0-.03,x0,2.05,2.062,z0+.15,z1-.15,mat.steel);}}
+appliance(3.28,3.875,3.79,4.40,'n',3.81); grilleAndTop(3.28,3.875,3.79,4.40,'n'); box(3.875,3.89,0,H,3.79,4.42,mat.wall,walls);       // fridge
+appliance(2.66,3.28,4.46,5.10,'w',4.53); grilleAndTop(2.64,3.28,4.44,5.16,'w');       // freezer
+box(3.28,3.88,0,H,4.42,5.16,mat.wall,walls);                                   // plain wall toward the living room
+box(3.88,3.898,.08,2.32,4.44,5.02,mat.greydoor); box(3.898,3.925,1.04,1.056,4.47,4.77,mat.steel); box(3.898,3.91,1.04,1.056,4.47,4.48,mat.steel); // tall grey cupboard facing the smyg
+// radiator under the kitchen window (photo)
+box(0.01,0.09,.15,.7,4.56,5.06,mat.white);
+// Bathroom (photos): shower corner by the window, partition, laundry along the north wall
+function tileSkin(axis,a0,a1,c,y0,y1){const m=texMat(wallTileTex,a1-a0,y1-y0,1.2,{roughness:.3});
+  return axis==='x'?box(a0,a1,y0,y1,c-.003,c+.003,m,fixed,false):box(c-.003,c+.003,y0,y1,a0,a1,m,fixed,false);}
+const TH=2.45;                                                     // tiles up to the lowered ceiling (UT8 2465)
+wallBox(1.64,1.755,0,H,0,1.06);                                      // tiled partition between shower and laundry
+tileSkin('x',0,3.115,0.003,0,TH); tileSkin('x',0,3.115,1.897,0,TH);
+tileSkin('z',0,1.0,0.003,0,TH); tileSkin('z',1.0,1.85,0.003,2.1,TH); tileSkin('z',1.85,1.9,0.003,0,TH);
+tileSkin('z',0,.7,3.112,0,TH); tileSkin('z',1.5,1.9,3.112,0,TH); tileSkin('z',.7,1.5,3.112,2.1,TH);
+tileSkin('z',0,1.06,1.637,0,TH); tileSkin('z',0,1.06,1.758,0,TH);
+// shower: rain shower + thermostat on the north wall, curtain rod at z≈1.0
+cyl(.38,.035,.014,.95,2.12,mat.steel); box(.37,.39,2.1,2.12,.035,.33,mat.steel); cyl(.38,.33,.15,2.07,2.085,mat.steel);
+box(.21,.55,.98,1.04,.03,.09,mat.steel); cyl(.49,.1,.025,.5,1.4,mat.steel);
+{const rod=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1.64,12),mat.white);rod.rotation.z=Math.PI/2;rod.position.set(.82,2.05,1.06);fixed.add(rod);}
+box(.02,.34,.12,2.03,1.02,1.1,M(0x9cc4e8,{roughness:.8}));        // curtain pulled toward the window
+box(1.62,1.64,1.2,1.24,.3,.8,mat.white);                             // grab bar on the partition
+// laundry: changing board, wood worktop over the washer, wall cabinets
+box(1.755,2.43,.9,.93,0,.66,mat.birch); box(1.785,2.40,.93,.97,.02,.62,M(0x6e4a32,{roughness:.95}));
+box(2.43,3.115,.88,.92,0,.62,M(0x4a2a1f,{roughness:.45}));
+box(2.47,3.07,0,.86,.03,.6,mat.white); cyl(2.77,.605,.17,.42,.46,mat.black).rotation.x=Math.PI/2; cyl(2.77,.612,.13,.42,.44,mat.glass).rotation.x=Math.PI/2;
+box(2.49,3.05,.74,.84,.6,.605,mat.frame);
+box(1.9,3.115,1.55,2.3,0,.35,mat.white); for(const x of[2.20,2.51,2.81])box(x-.003,x+.003,1.57,2.28,.35,.353,mat.counter);
+for(const x of[2.49,2.57])box(x-.008,x+.008,1.62,1.8,.353,.375,mat.steel);
+// WC: toilet, chrome wire shelf in the corner, birch vanity with mirror cabinet, towel hooks
+tileSkin('x',3.23,5.06,0.003,0,TH); tileSkin('z',0,1.9,5.057,0,TH);
+tileSkin('z',0,.7,3.233,0,TH); tileSkin('z',1.5,1.9,3.233,0,TH); tileSkin('z',.7,1.5,3.233,2.1,TH);
+tileSkin('x',3.23,4.08,1.897,0,TH); tileSkin('x',4.96,5.06,1.897,0,TH); tileSkin('x',4.08,4.96,1.897,2.15,TH);
+box(3.235,3.415,.4,.82,.42,.8,mat.ceramic);                           // cistern
+{const b=cyl(3.65,.61,.19,0,.4,mat.ceramic);b.scale.x=1.25;} box(3.43,3.9,.4,.43,.44,.78,mat.ceramic);
+for(const px of[3.255,3.565])for(const pz of[.03,.37])cyl(px,pz,.012,0,1.78,mat.steel);
+for(const y of[.12,.45,.8,1.15,1.5,1.76])box(3.245,3.575,y,y+.012,.02,.38,mat.steel);
+box(3.98,4.63,.15,.82,0,.45,mat.birch); box(4.305,4.31,.17,.62,.45,.455,mat.counter);
+for(const x of[4.27,4.34])box(x-.01,x+.01,.5,.62,.455,.48,mat.steel);
+box(3.95,4.66,.82,.88,0,.5,mat.ceramic); cyl(4.3,.12,.03,.88,.98,mat.steel); box(4.29,4.31,.96,.98,.12,.22,mat.steel);
+box(4.0,4.62,1.36,2.1,0,.15,mat.birch); box(4.02,4.6,1.6,2.06,.15,.155,M(0xeef3f5,{roughness:.08,metalness:.25}));
+box(3.98,4.64,2.1,2.13,0,.2,mat.birch);
+for(const z of[.7,.95])box(4.97,5.055,.95,1.42,z-.09,z+.09,mat.mustard);
+// Built-in wardrobes (sovrum), hall cabinet + hooks, walk-in closet shelving
+// Rosas rum (photos): light-blue wall toward the bedroom, painted arc in the bunk nook, radiator under the window
+box(5.77,9.78,.012,H,6.444,6.45,M(0xa9cfd0,{roughness:.9}),walls,false);
+{const arc=new THREE.Mesh(new THREE.CircleGeometry(.55,48,0,Math.PI),M(0xd9a98c,{roughness:.95}));arc.position.set(8.25,1.22,3.786);fixed.add(arc);}
+box(9.66,9.76,.15,.65,5.02,6.28,mat.white); box(9.6,9.78,.85,.88,4.92,6.38,mat.white);
+// Sovrum (photos): radiator under the window toward the headboard corner
+box(9.66,9.76,.15,.75,8.35,9.85,mat.white); box(9.6,9.78,.85,.88,7.6,9.25,mat.white);
+box(5.77,6.37,0,2.2,8.2,10.0,mat.white); for(const z of[8.8,9.4]) box(6.37,6.38,.05,2.15,z-.004,z+.004,mat.counter);
+box(7.546,7.55,.015,H,0.84,3.02,mat.pink,walls,false);                         // pink hall wall (photo)
+box(5.77,6.22,0,2.0,3.15,4.48,mat.white); box(6.22,7.52,0,2.0,4.05,4.48,mat.white);
+
+// ---------- movable furniture: builders (local frame: width along x, depth along z, front faces +z) ----------
+const matCache={};
+function colMat(hex,fb){if(typeof hex!=='string'||!/^#[0-9a-f]{6}$/i.test(hex))return fb;return matCache[hex]||(matCache[hex]=M(new THREE.Color(hex)));}
+function legs(g,w,d,h,m,inset=.06,s=.025){for(const sx of[-1,1])for(const sz of[-1,1])box(sx*(w/2-inset)-s,sx*(w/2-inset)+s,0,h,sz*(d/2-inset)-s,sz*(d/2-inset)+s,m,g);}
+function sofa(g,w,d,m){box(-w/2,w/2,.1,.42,-d/2,d/2,m,g);box(-w/2,w/2,.42,.82,-d/2,-d/2+.2,m,g);
+  box(-w/2,-w/2+.18,.42,.62,-d/2,d/2,m,g);box(w/2-.18,w/2,.42,.62,-d/2,d/2,m,g);
+  const n=Math.max(1,Math.round((w-.36)/.62));for(let k=0;k<n;k++){const sp=(w-.36)/n,x0=-w/2+.18+k*sp;box(x0+.02,x0+sp-.02,.42,.52,-d/2+.2,d/2-.02,mat.cushion,g);}
+  legs(g,w,d,.1,mat.darkwood,.06,.02);}
+function armchair(g,w,d,m){box(-w/2,w/2,.1,.42,-d/2,d/2,m,g);box(-w/2,w/2,.42,.85,-d/2,-d/2+.18,m,g);
+  box(-w/2,-w/2+.1,.42,.6,-d/2,d/2,m,g);box(w/2-.1,w/2,.42,.6,-d/2,d/2,m,g);legs(g,w,d,.1,mat.darkwood,.05,.02);}
+function chair(g,w,d,m){const hw=w/2-.005,hd=d/2-.005;box(-hw,hw,.43,.47,-hd,hd,m,g);box(-hw,hw,.47,.85,-hd,-hd+.04,m,g);legs(g,w,d,.43,m,.04,.02);}
+function table(g,w,d,h,m){box(-w/2,w/2,h-.04,h,-d/2,d/2,m,g);legs(g,w,d,h-.04,m);}
+function bed(g,w,L,duv){box(-w/2,w/2,.05,.3,-L/2,L/2,mat.wood,g);box(-w/2+.02,w/2-.02,.3,.52,-L/2+.02,L/2-.02,mat.linen,g);
+  box(-w/2-.02,w/2+.02,0,1.0,-L/2-.06,-L/2,mat.textile,g);
+  const np=w>1.3?2:1;for(let k=0;k<np;k++){const pw=w/np-.12,x0=-w/2+.06+k*(w/np);box(x0,x0+pw,.52,.64,-L/2+.06,-L/2+.46,mat.ceramic,g);}
+  box(-w/2-.01,w/2+.01,.5,.58,-L/2+.6,L/2+.01,duv,g);}
+function chest(g,w,d,h,m,tall){box(-w/2,w/2,0,h,-d/2,d/2,m,g);
+  if(tall){const n=Math.max(1,Math.round(w/.5));for(let k=1;k<n;k++){const x=-w/2+w*k/n;box(x-.004,x+.004,.05,h-.05,d/2,d/2+.004,mat.counter,g);}}
+  else for(let k=1;k<4;k++){const y=h*k/4;box(-w/2+.02,w/2-.02,y-.004,y+.004,d/2,d/2+.004,mat.counter,g);}}
+function tvbench(g,w,d,m){box(-w/2,w/2,0,.45,-d/2,d/2,m,g);const tw=Math.max(.4,Math.min(w-.2,1.3));
+  box(-tw/2,tw/2,.62,.62+tw*.57,-d/2+.06,-d/2+.1,mat.screen,g);box(-.05,.05,.45,.62,-d/2+.04,-d/2+.12,mat.black,g);}
+// decorative books: deterministic per shelf so they look the same for everyone
+const BOOKCOL=[0x2f4b6e,0x8c2f39,0x3f6b4f,0xd9c7a3,0x1f2326,0xc9783a,0x6b5b8e,0xe6e1d6,0x9a3b5c,0x4f7f8a,0xc8a83e,0x5a3e2b];
+const bookMats=BOOKCOL.map(c=>M(c,{roughness:.8}));
+function books(g,x0,x1,y,zb,dep,seed,fill=.75,maxH=.3){let r=seed*9301+49297;const rnd=()=>{r=(r*9301+49297)%233280;return r/233280;};
+  let x=x0+.01;const end=x0+(x1-x0)*fill;
+  while(x<end){if(rnd()<.12){x+=.04+rnd()*.06;continue;}
+    const t=.015+rnd()*.03,h=Math.min(maxH,.16+rnd()*.14),dd=Math.min(dep-.01,.14+rnd()*.08);if(x+t>x1-.01)break;
+    const b=new THREE.Mesh(new THREE.BoxGeometry(t,h,dd),bookMats[Math.floor(rnd()*bookMats.length)]);b.position.set(x+t/2,y+h/2,zb+dd/2);b.castShadow=true;g.add(b);x+=t+.002;}
+  if(x<x1-.12&&rnd()<.6){let y2=y;for(let k=0;k<2+Math.floor(rnd()*3);k++){const bh=.025+rnd()*.02,bw=.16+rnd()*.06;box(x1-.02-bw,x1-.02,y2,y2+bh,zb+.01,zb+Math.min(dep-.01,.2),bookMats[Math.floor(rnd()*bookMats.length)],g);y2+=bh;}}}
+function shelf(g,w,d,m){box(-w/2,w/2,0,1.95,-d/2,d/2,m,g);for(const y of[.4,.8,1.2,1.6])box(-w/2+.02,w/2-.02,y,y+.02,d/2-.01,d/2+.004,mat.darkwood,g);
+  [.02,.42,.82,1.22,1.62].forEach((y,k)=>books(g,-w/2+.02,w/2-.02,y,-d/2+.02,d-.03,k+1+Math.round(w*10),.8,.33));}
+function plant(g,w,d,m){const r=Math.min(w,d)/2*.85,h=Math.max(.6,r*5);cyl(0,0,r*.9,0,.38,mat.pot,g);
+  const sh=new THREE.Mesh(new THREE.IcosahedronGeometry(r*1.9,1),m);sh.position.set(0,.38+h*.45,0);sh.scale.set(1,h/(r*3.2),1);sh.castShadow=true;g.add(sh);}
+function lamp(g,w,d,m){const r=Math.min(w,d)/2;cyl(0,0,.012,0,1.55,mat.black,g);cyl(0,0,r*.95,1.5,1.72,m,g);cyl(0,0,r*.8,0,.02,mat.black,g);}
+function landskrona(g,w,d,m,side){const D=Math.min(.89,d),cw=side?Math.min(.95,w*.42):0,z0=-d/2,ar=.12;
+  // legs (15 cm, wood)
+  const lz=side?[z0+.06,z0+D-.06]:[z0+.06,d/2-.06];
+  for(const lx of[-w/2+.06,w/2-.06])for(const z of lz)cyl(lx,z,.022,0,.15,mat.wood,g);
+  if(side){const sx=side>0?w/2-.06:-w/2+.06,ix=side>0?w/2-cw+.06:-w/2+cw-.06;cyl(sx,d/2-.06,.022,0,.15,mat.wood,g);cyl(ix,d/2-.06,.022,0,.15,mat.wood,g);}
+  // frame + back
+  box(-w/2,w/2,.15,.36,z0,z0+D,m,g); box(-w/2,w/2,.36,.78,z0,z0+.17,m,g);
+  if(side){const a=side>0?w/2-cw:-w/2,b=side>0?w/2:-w/2+cw;box(a,b,.15,.36,z0+D,d/2,m,g);}
+  // slim arms
+  const armL=side<0?d:D, armR=side>0?d:D;
+  box(-w/2,-w/2+ar,.36,.6,z0,z0+armL,m,g); box(w/2-ar,w/2,.36,.6,z0,z0+armR,m,g);
+  // seat cushions
+  const xi0=-w/2+ar,xi1=w/2-ar;
+  if(side){const cx=side>0?w/2-cw:-w/2+cw;const r0=side>0?xi0:cx,r1=side>0?cx:xi1;const n=Math.max(1,Math.round((r1-r0)/.6));
+    for(let k=0;k<n;k++){const a=r0+(r1-r0)*k/n,b=r0+(r1-r0)*(k+1)/n;box(a+.01,b-.01,.36,.45,z0+.17,z0+D-.01,m,g);}
+    const c0=side>0?cx:xi0,c1=side>0?xi1:cx;box(c0+.01,c1-.01,.36,.45,z0+.17,d/2-.01,m,g);}
+  else{const n=Math.max(1,Math.round((xi1-xi0)/.6));for(let k=0;k<n;k++){const a=xi0+(xi1-xi0)*k/n,b=xi0+(xi1-xi0)*(k+1)/n;box(a+.01,b-.01,.36,.45,z0+.17,d/2-.01,m,g);}}
+  // back cushions
+  const nb=Math.max(1,Math.round((xi1-xi0)/.62));for(let k=0;k<nb;k++){const a=xi0+(xi1-xi0)*k/nb,b=xi0+(xi1-xi0)*(k+1)/nb;box(a+.01,b-.01,.45,.76,z0+.15,z0+.32,m,g);}}
+function tableTeak(g,w,d,m){box(-w/2,w/2,.722,.74,-d/2,d/2,m,g);
+  box(-w/2-.008,w/2+.008,.70,.74,-d/2-.008,-d/2+.004,mat.teak,g);box(-w/2-.008,w/2+.008,.70,.74,d/2-.004,d/2+.008,mat.teak,g);
+  box(-w/2-.008,-w/2+.004,.70,.74,-d/2,d/2,mat.teak,g);box(w/2-.004,w/2+.008,.70,.74,-d/2,d/2,mat.teak,g);
+  box(-w/2+.06,w/2-.06,.62,.70,-d/2+.06,d/2-.06,mat.teak,g);legs(g,w,d,.70,mat.teak,.07,.024);}
+function spindleBench(g,w,d,m){box(-w/2,w/2,.42,.46,-d/2,d/2,m,g);legs(g,w,d,.42,m,.05,.02);
+  box(-w/2,w/2,.88,.92,-d/2,-d/2+.05,m,g);for(let x=-w/2+.06;x<w/2-.04;x+=.075)box(x-.01,x+.01,.46,.88,-d/2+.015,-d/2+.035,m,g);
+  for(const sx of[-1,1]){box(sx*w/2-.02,sx*w/2+.02,.46,.68,-d/2,d/2-.04,m,g);box(sx*w/2-.025,sx*w/2+.025,.66,.69,-d/2,d/2-.02,m,g);}
+  box(-w/2+.05,w/2-.12,.46,.52,-d/2+.05,d/2-.02,mat.sheep,g);}
+function spindleChair(g,w,d,m){const hw=w/2,hd=d/2;box(-hw,hw,.43,.46,-hd,hd,m,g);legs(g,w,d,.43,m,.04,.016);
+  box(-hw+.02,hw-.02,.15,.17,-hd+.04,hd-.04,m,g);box(-hw,hw,.9,.95,-hd-.02,-hd+.02,m,g);
+  for(let k=0;k<7;k++){const x=-hw+.05+k*(w-.1)/6;box(x-.008,x+.008,.46,.9,-hd-.005,-hd+.012,m,g);}}
+function trippTrapp(g,w,d,m){for(const sx of[-1,1]){const x=sx*(w/2-.015);box(x-.015,x+.015,0,.04,-d/2,d/2,m,g);
+    const up=new THREE.Mesh(new THREE.BoxGeometry(.03,.82,.06),m);up.position.set(x,.42,-d/2+.2);up.rotation.x=-.28;up.castShadow=true;g.add(up);}
+  box(-w/2+.03,w/2-.03,.48,.5,-d/2+.12,d/2-.12,m,g);box(-w/2+.03,w/2-.03,.24,.26,-d/2+.15,d/2-.05,m,g);
+  box(-w/2+.03,w/2-.03,.62,.68,-d/2+.06,-d/2+.08,m,g);box(-w/2+.03,w/2-.03,.72,.78,-d/2+.03,-d/2+.05,m,g);}
+function pendant(g,w,d,m){const r=Math.min(w,d)/2;cyl(0,0,.005,1.62,H,mat.black,g);
+  const sh=new THREE.Mesh(new THREE.CylinderGeometry(r*.55,r,.24,32,1,true),m);sh.material.side=THREE.DoubleSide;sh.position.set(0,1.5,0);g.add(sh);
+  cyl(0,0,r*.55,1.62,1.64,m,g);const lit=new THREE.Mesh(new THREE.CircleGeometry(r*.96,32),mat.led);lit.rotation.x=Math.PI/2;lit.position.set(0,1.385,0);g.add(lit);}
+function shoeCabinet(g,w,d,m){box(-w/2,w/2,0,1.35,-d/2,d/2,m,g);for(let k=1;k<3;k++){const y=1.35*k/3;box(-w/2+.01,w/2-.01,y-.004,y+.004,d/2,d/2+.004,mat.counter,g);}}
+function shoeRack(g,w,d,m){for(const y of[.1,.3])box(-w/2,w/2,y,y+.012,-d/2,d/2,m,g);for(const sx of[-1,1])box(sx*w/2-.008,sx*w/2+.008,0,.42,-d/2,d/2,m,g);}
+function coatRack(g,w,d,m){box(-w/2,w/2,1.88,1.9,-d/2,d/2,mat.teak,g);for(const sx of[-1,1])box(sx*(w/2-.08)-.01,sx*(w/2-.08)+.01,1.7,1.88,-d/2,-d/2+.06,mat.steel,g);
+  const r=new THREE.Mesh(new THREE.CylinderGeometry(.014,.014,w,12),mat.teak);r.rotation.z=Math.PI/2;r.position.set(0,1.76,0);g.add(r);
+  const cols=[0xb39064,0xd7a4d6,0x1f2326,0x6b5240,0xd7b23a,0x23272b,0xe4a3d9];const n=Math.max(2,Math.floor(w/.11));
+  for(let k=0;k<n;k++){const x=-w/2+.08+k*(w-.16)/(n-1);box(x-.04,x+.04,.95+(k%3)*.08,1.74,-.2,.2,M(cols[k%cols.length],{roughness:.95}),g);}}
+function doorCabinet(g,w,d,h,m,doors,legs){const y0=legs?.1:0;box(-w/2,w/2,y0,h,-d/2,d/2,m,g);if(legs)for(const sx of[-1,1])for(const sz of[-1,1])box(sx*(w/2-.04)-.015,sx*(w/2-.04)+.015,0,y0,sz*(d/2-.04)-.015,sz*(d/2-.04)+.015,m,g);
+  for(let k=1;k<doors;k++){const x=-w/2+w*k/doors;box(x-.003,x+.003,y0+.01,h-.01,d/2,d/2+.004,mat.counter,g);}}
+function chestPine(g,w,d,m){box(-w/2,w/2,.12,.92,-d/2,d/2,m,g);legs(g,w,d,.12,m,.03,.02);
+  for(let k=1;k<3;k++){const y=.12+.8*k/3;box(-w/2+.01,w/2-.01,y-.004,y+.004,d/2,d/2+.004,mat.darkwood,g);}
+  for(let k=0;k<3;k++){const y=.12+.8*(k+.5)/3;for(const sx of[-1,1])cyl(sx*w*.28,d/2+.015,.018,y-.018,y+.018,mat.wood,g).rotation.x=Math.PI/2;}}
+function stool(g,w,d,m){box(-w/2,w/2,.43,.46,-d/2,d/2,mat.birch,g);legs(g,w,d,.43,mat.white,.04,.013);}
+function pixelCabinet(g,w,d,m){box(-w/2,w/2,.36,1.26,-d/2,d/2,m,g);legs(g,w,d,.36,m,.03,.02);
+  const pal=[0x1f5a4a,0xf4f4f2,0x433a5e,0x16181a,0xf2b81e,0x4f9a3c,0x5aa8d0,0xc5306f,0x24318a];const cw=(w-.02)/4,ch=.9/6;
+  for(let r=0;r<6;r++)for(let c=0;c<4;c++){const x0=-w/2+.01+c*cw,y0=.36+r*ch;box(x0+.003,x0+cw-.003,y0+.003,y0+ch-.003,d/2,d/2+.008,M(pal[(r*5+c*3+r*c)%pal.length],{roughness:.4}),g);}}
+function sideboardTv(g,w,d,m){box(-w/2,w/2,.17,.75,-d/2,d/2,m,g);legs(g,w,d,.17,m,.06,.02);
+  for(const x of[-w/6,w/6])box(x-.004,x+.004,.19,.73,d/2,d/2+.004,mat.darkwood,g);for(const y of[.34,.53])box(-w/6,w/6,y-.004,y+.004,d/2,d/2+.004,mat.darkwood,g);
+  const tw=Math.min(1.0,w-.3);box(-tw/2-.1,tw/2-.1,.75,.77,-d/2+.08,-d/2+.28,mat.frame,g);box(-tw/2-.1,tw/2-.1,.82,.82+tw*.6,-d/2+.12,-d/2+.16,mat.frame,g);
+  box(-tw/2-.06,tw/2-.14,.86,.78+tw*.6,-d/2+.159,-d/2+.163,mat.screen,g);box(-.14,-.06,.77,.82,-d/2+.12,-d/2+.16,mat.frame,g);}
+function speaker(g,w,d,m){box(-w/2,w/2,.03,1.0,-d/2,d/2,m,g);box(-w/2-.03,w/2+.03,0,.03,-d/2-.03,d/2+.03,m,g);}
+function coffeeBirch(g,w,d,m){box(-w/2,w/2,.5,.53,-d/2,d/2,m,g);box(-w/2+.04,w/2-.04,.45,.5,-d/2+.04,d/2-.04,m,g);legs(g,w,d,.5,m,.06,.03);}
+function spindleArmchair(g,w,d,m){const hw=w/2,hd=d/2;box(-hw,hw,.38,.42,-hd,hd,m,g);legs(g,w,d,.38,m,.05,.017);box(-hw+.03,hw-.03,.14,.16,-hd+.05,hd-.05,m,g);
+  box(-hw,hw,1.0,1.05,-hd-.05,-hd-.01,m,g);for(let k=0;k<9;k++){const x=-hw+.04+k*(w-.08)/8;box(x-.008,x+.008,.42,1.0,-hd-.04,-hd-.02,m,g);}
+  for(const sx of[-1,1]){box(sx*hw-.025,sx*hw+.025,.62,.65,-hd-.04,hd-.03,m,g);box(sx*hw-.01,sx*hw+.01,.42,.62,hd-.06,hd-.04,m,g);}}
+function evaChair(g,w,d,m){for(const sx of[-1,1]){const x=sx*(w/2-.02);box(x-.02,x+.02,0,.04,-d/2,d/2,mat.birch,g);box(x-.02,x+.02,.04,.62,d/2-.06,d/2-.02,mat.birch,g);box(x-.02,x+.02,.55,.6,-d/2+.1,d/2,mat.birch,g);}
+  const seat=new THREE.Mesh(new THREE.BoxGeometry(w-.06,.02,d*.62),m);seat.position.set(0,.36,d*.12);seat.rotation.x=-.12;seat.castShadow=true;g.add(seat);
+  const back=new THREE.Mesh(new THREE.BoxGeometry(w-.06,.62,.02),m);back.position.set(0,.66,-d/2+.12);back.rotation.x=-.32;back.castShadow=true;g.add(back);}
+function sideTableMarble(g,w,d,m){cyl(0,0,.012,0,.55,mat.white,g);cyl(0,0,.17,0,.015,mat.white,g);const t=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,.025,40),m);t.scale.set(w,1,d);t.position.set(0,.56,0);t.castShadow=true;g.add(t);}
+function stringShelf(g,w,d,m){const n=Math.max(1,Math.round(w/.8));for(let k=0;k<=n;k++){const x=-w/2+k*w/n;box(x-.006,x+.006,.95,2.05,-d/2,d/2,mat.white,g,false);}
+  for(const y of[1.05,1.35,1.65,1.95])box(-w/2,w/2,y,y+.018,-d/2,d/2,m,g);
+  [1.068,1.368,1.668].forEach((y,k)=>books(g,-w/2+.015,w/2-.015,y,-d/2+.01,d-.02,k+3+Math.round(w*10),.7,.27));}
+function stepStool(g,w,d,m){box(-w/2,w/2,.5,.53,-d/2,d/2,m,g);for(const sx of[-1,1]){const x=sx*(w/2-.02);box(x-.012,x+.012,0,.5,-d/2+.02,-d/2+.05,m,g);box(x-.012,x+.012,0,.5,d/2-.05,d/2-.02,m,g);}
+  for(const y of[.17,.34])box(-w/2+.03,w/2-.03,y,y+.015,-d/2+.06,d/2-.02,m,g);}
+function bunkBed(g,w,d,m){const p=.035,H1=1.57;for(const sx of[-1,1])for(const sz of[-1,1])box(sx*(w/2-p)-p,sx*(w/2-p)+p,0,H1,sz*(d/2-p)-p,sz*(d/2-p)+p,mat.pine,g);
+  for(const y0 of[.2,1.0]){box(-w/2+.07,w/2-.07,y0,y0+.15,-d/2,-d/2+.03,mat.pine,g);box(-w/2+.07,w/2-.07,y0,y0+.15,d/2-.03,d/2,mat.pine,g);
+    for(const sx of[-1,1])box(sx*(w/2-p)-.02,sx*(w/2-p)+.02,y0,y0+.15,-d/2+.07,d/2-.07,mat.pine,g);
+    box(-w/2+.07,w/2-.07,y0+.12,y0+.26,-d/2+.04,d/2-.04,mat.linen,g);}
+  box(-w/2+.4,w/2-.07,.38,.44,-d/2+.06,d/2-.06,M(0xc9c2b6,{roughness:1}),g);box(-w/2+.5,w/2-.07,1.26,1.33,-d/2+.06,d/2-.06,m,g);
+  for(const y of[1.35,1.5])box(-w/2+.07,w/2-.07,y,y+.08,-d/2,-d/2+.03,mat.pine,g);
+  for(const y of[1.35,1.5])box(-w/2+.5,w/2-.07,y,y+.08,d/2-.03,d/2,mat.pine,g);
+  for(const sx of[-1,1])for(const y of[.75,1.35])box(sx*(w/2-p)-.02,sx*(w/2-p)+.02,y,y+.1,-d/2+.07,d/2-.07,mat.pine,g);
+  const lx0=-w/2+.07,lx1=-w/2+.45;for(const x of[lx0,lx1])box(x-.02,x+.02,0,1.5,d/2-.01,d/2+.04,mat.pine,g);
+  for(const y of[.45,.75,1.05])box(lx0,lx1,y,y+.05,d/2,d/2+.04,mat.pine,g);}
+function retroDresser(g,w,d,m){for(const sx of[-1,1])for(const sz of[-1,1]){const l=cyl(sx*(w/2-.06),sz*(d/2-.06),.018,0,.24,mat.teak,g);l.rotation.z=-sx*.08;l.rotation.x=sz*.08;}
+  box(-w/2,w/2,.22,.86,-d/2,d/2,m,g);for(let k=0;k<3;k++){const y0=.25+k*.2;box(-w/2+.03,w/2-.03,y0,y0+.18,d/2,d/2+.006,mat.teak,g);box(-.06,.06,y0+.08,y0+.1,d/2+.006,d/2+.016,mat.darkwood,g);}}
+function stringShelfB(g,w,d,m){for(const x of[-w/2,w/2])box(x-.008,x+.008,.9,1.9,-d/2,d/2,mat.black,g,false);for(const y of[1.0,1.33,1.66])box(-w/2,w/2,y,y+.02,-d/2,d/2,m,g);
+  books(g,-w/2+.01,w/2-.01,1.68,-d/2+.01,d-.02,7,.75,.32);books(g,-w/2+.01,w/2-.01,1.02,-d/2+.01,d-.02,11,.35,.22);}
+function greyShelf(g,w,d,m){for(const sx of[-1,1])box(sx*w/2-.012,sx*w/2+.012,0,1.6,-d/2,d/2,m,g);for(const y of[.05,.42,.8,1.05,1.3,1.58])box(-w/2,w/2,y,y+.02,-d/2,d/2,m,g);box(-w/2,w/2,0,1.6,-d/2,-d/2+.01,m,g);
+  books(g,-w/2+.015,w/2-.015,1.6,-d/2+.015,d-.03,5,.85,.3);books(g,-w/2+.015,w/2-.015,1.32,-d/2+.015,d-.03,9,.6,.22);books(g,-w/2+.015,w/2-.015,.82,-d/2+.015,d-.03,13,.5,.2);}
+function deskChair(g,w,d,m){for(let k=0;k<5;k++){const a=k*Math.PI*2/5,b=new THREE.Mesh(new THREE.BoxGeometry(.03,.03,.3),mat.white);b.position.set(Math.sin(a)*.14,.06,Math.cos(a)*.14);b.rotation.y=a;g.add(b);cyl(Math.sin(a)*.28,Math.cos(a)*.28,.025,0,.05,mat.white,g);}
+  cyl(0,0,.025,.06,.44,mat.white,g);box(-w/2+.03,w/2-.03,.44,.5,-d/2+.03,d/2-.03,m,g);box(-w/2+.05,w/2-.05,.62,.9,-d/2+.02,-d/2+.06,m,g);box(-.015,.015,.48,.65,-d/2+.03,-d/2+.06,mat.white,g);}
+function bedsideCube(g,w,d,m){box(-w/2,w/2,0,.5,-d/2,d/2,m,g);const h=new THREE.Mesh(new THREE.CircleGeometry(.03,20),mat.black);h.position.set(0,.36,d/2+.002);g.add(h);}
+function roundStool(g,w,d,m){const r=Math.min(w,d)/2;cyl(0,0,r,.42,.45,m,g);for(let k=0;k<3;k++){const a=k*Math.PI*2/3;cyl(Math.sin(a)*r*.8,Math.cos(a)*r*.8,.018,0,.42,mat.birch,g);}}
+function crib(g,w,d,m){for(const sx of[-1,1])for(const sz of[-1,1])box(sx*(w/2-.025)-.025,sx*(w/2-.025)+.025,0,.86,sz*(d/2-.025)-.025,sz*(d/2-.025)+.025,m,g);
+  for(const y of[.22,.82])for(const sz of[-1,1])box(-w/2,w/2,y,y+.04,sz*(d/2-.025)-.02,sz*(d/2-.025)+.02,m,g);
+  for(const y of[.22,.82])for(const sx of[-1,1])box(sx*(w/2-.025)-.02,sx*(w/2-.025)+.02,y,y+.04,-d/2,d/2,m,g);
+  for(let x=-w/2+.09;x<w/2-.05;x+=.075)for(const sz of[-1,1])cyl(x,sz*(d/2-.025),.011,.26,.82,m,g);
+  box(-w/2+.05,w/2-.05,.24,.34,-d/2+.05,d/2-.05,M(0xb7cfe0,{roughness:1}),g);}
+function nightstandLegs(g,w,d,m){box(-w/2,w/2,.25,.58,-d/2,d/2,m,g);for(const y of[.33,.47])cyl(0,d/2+.01,.015,y-.015,y+.015,m,g).rotation.x=Math.PI/2;
+  for(const sx of[-1,1])for(const sz of[-1,1])cyl(sx*(w/2-.05),sz*(d/2-.05),.016,0,.25,m,g);box(-w/2+.03,w/2-.03,.4,.402,d/2,d/2+.003,mat.counter,g);}
+function pedestalTable(g,w,d,m){box(-w/2,w/2,.6,.63,-d/2,d/2,m,g);box(-.05,.05,.04,.6,-.05,.05,mat.pine,g);box(-.08,.08,.5,.6,-d/2+.05,d/2-.05,mat.pine,g);box(-.06,.06,0,.05,-d/2+.02,d/2-.02,mat.pine,g);}
+function storageBox(g,w,d,m){box(-w/2,w/2,0,w*.9,-d/2,d/2,m,g);}
+function chestTv(g,w,d,m){chestPine(g,w,d,m);box(-.32,.24,.95,1.33,-.02,.01,mat.screen,g);box(-.1,.02,.92,.95,-.06,.06,mat.black,g);}
+function lampOf(g,pos,col,int,dist,mats){const key='f:'+(g.userData.itemId||Math.random());return regLamp(key,g,pos,col,int,dist,mats);}
+function flowerpotLamp(g,w,d,m){const r=Math.min(w,d)/2;cyl(0,0,r*.55,0,.02,m,g);cyl(0,0,.008,.02,.36,m,g);
+  const sh=new THREE.Mesh(new THREE.SphereGeometry(r,28,14,0,Math.PI*2,0,Math.PI/2),m);sh.position.y=.33;g.add(sh);
+  const gm=glowMat(0xfff0d8,0xeeeeea);const b=new THREE.Mesh(new THREE.SphereGeometry(r*.38,18,12),gm);b.position.y=.31;g.add(b);lampOf(g,[0,.25,0],WARM,.6,2.5,[gm]);}
+function pleatLamp(g,w,d,m){const r=Math.min(w,d)/2;const gm=glowMat(0xffc983,0xf3e6cf);
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(r*.3,r*.62,.2,24,1,true),gm);base.position.y=.1;g.add(base);
+  const sh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,.15,24,1,true),gm);sh.position.y=.27;g.add(sh);const top=new THREE.Mesh(new THREE.CircleGeometry(r,24),gm);top.rotation.x=-Math.PI/2;top.position.y=.345;g.add(top);
+  lampOf(g,[0,.22,0],0xffc27a,.7,2.5,[gm]);}
+function mushroomLamp(g,w,d,m){const r=Math.min(w,d)/2;const gm=glowMat(0xfff2e0,0xe8e6e2);cyl(0,0,r*.42,0,.17,gm,g);
+  const dm=new THREE.Mesh(new THREE.SphereGeometry(r,26,14,0,Math.PI*2,0,Math.PI/2),gm);dm.position.y=.15;dm.scale.y=.9;g.add(dm);lampOf(g,[0,.2,0],WARM,.45,2,[gm]);}
+function callaLamp(g,w,d,m){const r=Math.min(w,d)/2;const gm=glowMat(0xfff4e4,0xf0eeea);cyl(0,0,r*.36,0,.3,gm,g);
+  const sh=new THREE.Mesh(new THREE.ConeGeometry(r,.3,28,1,true),gm);sh.rotation.x=Math.PI;sh.rotation.z=.35;sh.position.set(-.03,.44,0);g.add(sh);lampOf(g,[0,.42,0],WARM,.6,2.5,[gm]);}
+function shadeLamp(g,w,d,m){const r=Math.min(w,d)/2;const b=new THREE.Mesh(new THREE.SphereGeometry(r*.55,20,14),m);b.position.y=r*.5;g.add(b);
+  const gm=glowMat(0xffe0b0,0xf1ebdf);const sh=new THREE.Mesh(new THREE.CylinderGeometry(r*.62,r,.16,24,1,true),gm);sh.position.y=r*1.05+.08;g.add(sh);lampOf(g,[0,r+.05,0],WARM,.45,2,[gm]);}
+function clampLamp(g,w,d,m){const gm=glowMat(0xfff1d8,0xdddad4);const head=new THREE.Mesh(new THREE.CylinderGeometry(.04,.085,.12,20,1,true),m);head.material.side=THREE.DoubleSide;head.rotation.z=1.0;head.position.set(0,1.35,0);g.add(head);
+  const lens=new THREE.Mesh(new THREE.CircleGeometry(.075,20),gm);lens.position.set(.055,1.32,0);lens.rotation.y=Math.PI/2;lens.rotation.x=-.6;g.add(lens);box(-.08,-.06,1.3,1.42,-.01,.01,mat.black,g);lampOf(g,[.15,1.3,0],WARM,.6,2.5,[gm]);}
+function uplight(g,w,d,m){const r=Math.min(w,d)/2;cyl(0,0,r*.95,0,.012,m,g);cyl(0,0,.012,.012,1.4,m,g);
+  const gm=glowMat(0xfff4e6,0xf0eeea);const sh=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.32,.32,28,1,true),gm);sh.position.y=1.52;g.add(sh);lampOf(g,[0,1.75,0],WARM,.8,3.5,[gm]);}
+function bumling(g,w,d,m){const r=Math.min(w,d)/2;cyl(0,0,.006,1.92,H,mat.steel,g);const s1=cyl(0,0,r*.72,1.84,1.92,m,g);const s2=cyl(0,0,r,1.72,1.85,m,g);
+  const gm=glowMat(0xfff0d8,0xe8e3d6);const dd=new THREE.Mesh(new THREE.CircleGeometry(r*.97,32),gm);dd.rotation.x=Math.PI/2;dd.position.y=1.719;g.add(dd);lampOf(g,[0,1.6,0],WARM,1.0,4,[gm]);}
+function tvWall(g,w,d,m){const h=w*.58,y0=.85;box(-w/2,w/2,y0,y0+h,-d/2,d/2-.02,m,g);box(-w/2+.015,w/2-.015,y0+.015,y0+h-.015,d/2-.02,d/2-.016,mat.screen,g);
+  box(-.15,.15,y0+h*.3,y0+h*.7,-d/2-.01,-d/2+.01,mat.black,g);}
+function tubeBox(g,x0,x1,y0,y1,z0,z1,m){return box(x0,x1,y0,y1,z0,z1,m,g);}
+function outdoorFrame(g,w,d,m,backH){const t=.012;for(const sx of[-1,1])for(const sz of[-1,1])tubeBox(g,sx*(w/2-.02)-t,sx*(w/2-.02)+t,0,.42,sz*(d/2-.02)-t,sz*(d/2-.02)+t,m);
+  for(const sz of[-1,1])tubeBox(g,-w/2,w/2,.4,.42,sz*(d/2-.02)-t,sz*(d/2-.02)+t,m);for(const sx of[-1,1])tubeBox(g,sx*(w/2-.02)-t,sx*(w/2-.02)+t,.4,.42,-d/2,d/2,m);
+  for(let x=-w/2+.06;x<w/2-.04;x+=.09)tubeBox(g,x-.02,x+.02,.4,.415,-d/2+.04,d/2-.04,m);
+  tubeBox(g,-w/2,w/2,backH-.02,backH,-d/2,-d/2+.025,m);for(const sx of[-1,1]){tubeBox(g,sx*(w/2-.02)-t,sx*(w/2-.02)+t,.42,backH,-d/2,-d/2+.025,m);tubeBox(g,sx*(w/2-.02)-t,sx*(w/2-.02)+t,.6,.625,-d/2,d/2,m);}
+  for(let x=-w/2+.1;x<w/2-.05;x+=.11)tubeBox(g,x-.006,x+.006,.42,backH,-d/2,-d/2+.02,m);
+  for(const sx of[-1,1])for(let z=-d/2+.15;z<d/2-.1;z+=.15)tubeBox(g,sx*(w/2-.02)-.006,sx*(w/2-.02)+.006,.42,.6,z,z+.012,m);}
+function outdoorTable(g,w,d,m){for(let x=-w/2;x<w/2-.01;x+=.06)tubeBox(g,x+.005,x+.05,.43,.45,-d/2,d/2,m);legs(g,w,d,.43,m,.03,.012);}
+function raisedPlanter(g,w,d,m){for(const sx of[-1,1])for(const sz of[-1,1]){const l=cyl(sx*(w/2-.1),sz*(d/2-.08),.03,0,.48,m,g);}
+  const b=new THREE.Mesh(new THREE.CylinderGeometry(.5,.42,.3,32),m);b.scale.set(w,1,d);b.position.y=.63;b.castShadow=true;g.add(b);
+  const soil=new THREE.Mesh(new THREE.CircleGeometry(.48,32),M(0x3b2f26,{roughness:1}));soil.rotation.x=-Math.PI/2;soil.scale.set(w,d,1);soil.position.y=.76;g.add(soil);
+  for(let k=0;k<12;k++){const x=(k%6-2.5)*w/7,z=(Math.floor(k/6)-.5)*d/3;cyl(x,z,.006,.76,1.0+(k%3)*.06,M(0x8a8a3a),g);}}
+function storagePile(g,w,d,m){let y=0;for(const h of[.32,.3,.28]){box(-w/2+.02,w/2-.02,y,y+h,-d/2+.02,d/2-.02,m,g);y+=h-.02;}}
+function foldedChairs(g,w,d,m){for(let k=0;k<3;k++){const b=new THREE.Mesh(new THREE.BoxGeometry(w,.85,.04),m);b.position.set(0,.42,-d/2+.05+k*.08);b.rotation.x=-.25;b.castShadow=true;g.add(b);}}
+function potPlant(g,w,d,m){const r=Math.min(w,d)/2;const pot=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.78,r*1.6,24),M(0x1f2224,{roughness:.6}));pot.position.y=r*.8;pot.castShadow=true;g.add(pot);
+  const f=new THREE.Mesh(new THREE.IcosahedronGeometry(r*1.2,1),m);f.position.y=r*1.6+r*.9;f.scale.set(1,1.5,1);f.castShadow=true;g.add(f);}
+function terraPot(g,w,d,m){const r=Math.min(w,d)/2;const pot=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.75,r*1.4,24),M(0xc0663f,{roughness:.8}));pot.position.y=r*.7;pot.castShadow=true;g.add(pot);
+  const f=new THREE.Mesh(new THREE.IcosahedronGeometry(r*1.05,1),m);f.position.y=r*1.4+r*.6;f.castShadow=true;g.add(f);}
+function toyStorage(g,w,d,m){const h=.6;box(-w/2,w/2,0,.02,-d/2,d/2,m,g);box(-w/2,w/2,h-.02,h,-d/2,d/2,m,g);box(-w/2,w/2,0,h,-d/2,-d/2+.012,m,g);
+  const n=Math.max(2,Math.round(w/.38));for(let k=0;k<=n;k++){const x=-w/2+w*k/n;box(x-.009,x+.009,0,h,-d/2,d/2,m,g);}box(-w/2,w/2,.29,.31,-d/2,d/2,m,g);
+  const bins=[0xe7b7bd,0x9fcfca,0xf2c14e,0x8fb3d9,0xc9a0dc,0xf0a26b];
+  for(let k=0;k<n;k++){const x0=-w/2+w*k/n+.015,x1=-w/2+w*(k+1)/n-.015;box(x0,x1,.025,.27,-d/2+.03,d/2-.01,M(bins[k%bins.length],{roughness:.8}),g);
+    if(k%2===0)box(x0+.03,x1-.03,.32,.5,-d/2+.06,d/2-.06,M(bins[(k+3)%bins.length],{roughness:.8}),g);}
+  const toy=[0xd94f3d,0x3d7dd9,0xf2c14e,0x4f9a3c,0xffffff,0xc5306f];let r=7;const rnd=()=>{r=(r*9301+49297)%233280;return r/233280;};
+  for(let k=0;k<Math.round(w*7);k++){const x=-w/2+.06+rnd()*(w-.12),z=-d/2+.06+rnd()*(d-.12),c=M(toy[k%toy.length],{roughness:.6});
+    if(k%3===0){const b=new THREE.Mesh(new THREE.SphereGeometry(.035+rnd()*.03,14,10),c);b.position.set(x,h+.05,z);b.castShadow=true;g.add(b);}
+    else{const s=.04+rnd()*.06;box(x-s/2,x+s/2,h,h+.03+rnd()*.12,z-s/2,z+s/2,c,g);}}}
+function storageBench(g,w,d,m){const h=.48,t=.018;// SMÅSTAD: frame + top, pull-out drawer on castors at the front
+  box(-w/2,-w/2+t,0,h,-d/2,d/2,m,g);box(w/2-t,w/2,0,h,-d/2,d/2,m,g);box(-w/2,w/2,h-t,h,-d/2,d/2,m,g);box(-w/2+t,w/2-t,0,h-t,-d/2,-d/2+t,m,g);
+  box(-w/2+t+.004,w/2-t-.004,.02,h-t-.006,-d/2+.03,d/2,m,g);box(-w/2+t,w/2-t,h-t-.006,h-t,-d/2,d/2+.001,M(0xb8b8b4),g);
+  for(const sx of[-1,1])for(const sz of[-1,1])cyl(sx*(w/2-.07),sz*(d/2-.08),.012,0,.02,mat.black,g);
+  const toy=[0xf2c14e,0xd94f3d,0x3d7dd9,0x4f9a3c,0xe48aa8,0x9fd3e0,0x5e6366];let r=11;const rnd=()=>{r=(r*9301+49297)%233280;return r/233280;};
+  for(let k=0;k<Math.round(w*14);k++){const x=-w/2+.08+rnd()*(w-.16),z=-d/2+.08+rnd()*(d-.16),c=M(toy[k%toy.length],{roughness:.55});
+    if(k===3){const b=new THREE.Mesh(new THREE.SphereGeometry(.1,20,14),M(0xf3c6cf,{roughness:.6}));b.position.set(x,h+.2,z);b.castShadow=true;g.add(b);continue;}
+    if(k%4===0){const b=new THREE.Mesh(new THREE.SphereGeometry(.04+rnd()*.03,14,10),c);b.position.set(x,h+.05,z);b.castShadow=true;g.add(b);}
+    else{const lx=.08+rnd()*.12,lz=.06+rnd()*.08;box(x-lx/2,x+lx/2,h,h+.05+rnd()*.12,z-lz/2,z+lz/2,c,g);}}}
+function hallBench(g,w,d,m){const t=.03;for(const sx of[-1,1])box(sx*(w/2-t/2)-t/2,sx*(w/2-t/2)+t/2,0,.42,-d/2,d/2,m,g);
+  box(-w/2,w/2,.40,.43,-d/2,d/2,m,g);box(-w/2+t,w/2-t,.12,.14,-d/2+.02,d/2-.02,m,g);
+  box(-w/2+.02,w/2-.02,.43,.48,-d/2+.02,d/2-.02,M(0x8c8f84,{roughness:1}),g);
+  const sh=[0x1f2326,0x6b5240,0xd7a4d6,0x3d5a80];for(let k=0;k<Math.floor((w-.1)/.16);k++){const x=-w/2+.08+k*.16;box(x,x+.11,.14,.22,-d/2+.06,d/2-.06,M(sh[k%sh.length],{roughness:.7}),g);}}
+const CAT={
+  hallBench:{name:'Hallbänk med skohylla och dyna',w:.8,d:.35,m:mat.birch,b:hallBench},
+  storageBench:{name:'Bänk med leksakslåda (SMÅSTAD)',w:.9,d:.52,m:mat.white,b:storageBench},
+  toyStorage:{name:'Förvaring med leksaker',w:1.2,d:.4,m:mat.white,b:toyStorage},
+  outdoorSofa:{name:'Utesoffa, svart metall',w:1.6,d:.72,m:M(0x2c2f33,{roughness:.5}),b:(g,w,d,m)=>outdoorFrame(g,w,d,m,.82)},
+  outdoorChair:{name:'Utefåtölj, svart metall',w:.72,d:.72,m:M(0x2c2f33,{roughness:.5}),b:(g,w,d,m)=>outdoorFrame(g,w,d,m,.82)},
+  outdoorTable:{name:'Utebord, svart metall',w:1.0,d:.45,m:M(0x2c2f33,{roughness:.5}),b:outdoorTable},
+  raisedPlanter:{name:'Odlingslåda på ben',w:.85,d:.4,m:M(0x3a3d40,{roughness:.6}),b:raisedPlanter},
+  storagePile:{name:'Förvaring under presenning',w:.6,d:.5,m:M(0x161718,{roughness:.3}),b:storagePile},
+  foldedChairs:{name:'Hopfällda trästolar',w:.45,d:.3,m:M(0xb9b4aa,{roughness:.9}),b:foldedChairs},
+  potPlant:{name:'Kruka med växt, svart',w:.36,d:.36,m:M(0x7e9a3c,{roughness:.9}),b:potPlant},
+  terraPot:{name:'Terrakottakruka',w:.3,d:.3,m:M(0x4f7a4a,{roughness:.9}),b:terraPot},
+  tvWall:{name:'TV på vägg',w:1.0,d:.08,m:mat.frame,b:tvWall},
+  bumling:{name:'Taklampa Bumling',w:.4,d:.4,m:M(0xd9ccad,{roughness:.35}),b:bumling},
+  flowerpot:{name:'Bordslampa Flowerpot',w:.23,d:.23,m:M(0xc9c3b6,{roughness:.35}),b:flowerpotLamp},
+  pleatLamp:{name:'Bordslampa veckad papper',w:.34,d:.34,m:mat.white,b:pleatLamp},
+  mushroomLamp:{name:'Bordslampa svamp, glas',w:.28,d:.28,m:mat.white,b:mushroomLamp},
+  callaLamp:{name:'Bordslampa papper, kalla',w:.3,d:.3,m:mat.white,b:callaLamp},
+  shadeLamp:{name:'Bordslampa med skärm',w:.22,d:.22,m:mat.white,b:shadeLamp},
+  clampLamp:{name:'Klämspot på hylla',w:.2,d:.2,m:M(0x5e5f5c,{roughness:.4}),b:clampLamp},
+  uplight:{name:'Golvlampa uplight',w:.42,d:.42,m:mat.white,b:uplight},
+  crib:{name:'Spjälsäng',w:1.26,d:.66,m:mat.birch,b:crib},
+  nightstandLegs:{name:'Sängbord vitt, ben',w:.45,d:.38,m:mat.white,b:nightstandLegs},
+  pedestalTable:{name:'Sidobord på pelare',w:.42,d:.38,m:M(0xcfe6e2,{roughness:.4}),b:pedestalTable},
+  storageBox:{name:'Förvaringslåda',w:.38,d:.38,m:M(0xc8b28e,{roughness:.9}),b:storageBox},
+  chestTv:{name:'Byrå furu med TV',w:.95,d:.45,m:mat.pine,b:chestTv},
+  bunkBed:{name:'Våningssäng, furu',w:2.07,d:.97,m:M(0xe9a0c6,{roughness:.9}),b:bunkBed},
+  retroDresser:{name:'Byrå, retro 3 lådor',w:.7,d:.42,m:M(0xbcdcdc,{roughness:.6}),b:retroDresser},
+  stringShelfBlack:{name:'Vägghylla, svarta gavlar',w:.8,d:.3,m:mat.teak,b:stringShelfB},
+  greyShelf:{name:'Bokhylla, grå',w:.6,d:.33,m:M(0xbfc3c4,{roughness:.6}),b:greyShelf},
+  deskChair:{name:'Skrivbordsstol',w:.5,d:.5,m:M(0xe7b7bd,{roughness:.8}),b:deskChair},
+  bedsideCube:{name:'Sängbord, furukub',w:.42,d:.42,m:mat.pine,b:bedsideCube},
+  roundStool:{name:'Pall, rund (Stool 60)',w:.38,d:.38,m:mat.birch,b:roundStool},
+  stepStool:{name:'Trappstege/pall, krom',w:.4,d:.42,m:mat.steel,b:stepStool},
+  shoeCabinet:{name:'Skoskåp, vitt',w:.49,d:.28,m:mat.white,b:shoeCabinet},
+  shoeRack:{name:'Skoställ, tråd',w:.7,d:.3,m:mat.white,b:shoeRack},
+  coatRack:{name:'Hatthylla med klädstång',w:.9,d:.32,m:mat.teak,b:coatRack},
+  ivar:{name:'IVAR skåp, furu',w:.8,d:.3,m:mat.pine,b:(g,w,d,m)=>doorCabinet(g,w,d,.83,m,2,false)},
+  chestPine:{name:'Byrå, furu (TARVA)',w:.79,d:.39,m:mat.pine,b:chestPine},
+  stool:{name:'Pall',w:.35,d:.35,m:mat.white,b:stool},
+  pixelCabinet:{name:'Skåp med färgrutor',w:.62,d:.4,m:mat.white,b:pixelCabinet},
+  sideboardTv:{name:'Sideboard teak med TV',w:1.8,d:.45,m:mat.teak,b:sideboardTv},
+  speaker:{name:'Golvhögtalare',w:.22,d:.3,m:mat.speakerblk,b:speaker},
+  coffeeBirch:{name:'Soffbord, björk',w:.65,d:.65,m:mat.birch,b:coffeeBirch},
+  spindleArmchair:{name:'Pinnfåtölj',w:.62,d:.62,m:mat.white,b:spindleArmchair},
+  evaChair:{name:'Fåtölj, böjträ/gjord',w:.6,d:.75,m:mat.webbing,b:evaChair},
+  sideTableMarble:{name:'Sidobord, marmor',w:.5,d:.4,m:mat.marble,b:sideTableMarble},
+  stringShelf:{name:'Vägghylla (String)',w:1.6,d:.3,m:mat.teak,b:stringShelf},
+  recordCabinet:{name:'Lågt skåp, vitt',w:1.2,d:.4,m:mat.white,b:(g,w,d,m)=>doorCabinet(g,w,d,.72,m,2,false)},
+  tableTeak:{name:'Matbord teak/laminat',w:1.3,d:.8,m:mat.laminate,b:tableTeak},
+  kitchenbench:{name:'Kökssoffa, pinnar',w:1.6,d:.5,m:mat.white,b:spindleBench},
+  spindlechair:{name:'Pinnstol',w:.42,d:.45,m:mat.white,b:spindleChair},
+  tripptrapp:{name:'Tripp Trapp',w:.46,d:.5,m:mat.mint,b:trippTrapp},
+  pendant:{name:'Taklampa',w:.4,d:.4,m:mat.linen,b:pendant},
+  landskrona:{name:'LANDSKRONA 3-sits',w:2.04,d:.89,m:mat.landsk,b:(g,w,d,m)=>landskrona(g,w,d,m,0)},
+  landskronaR:{name:'LANDSKRONA m. schäslong höger',w:2.40,d:1.58,m:mat.landsk,b:(g,w,d,m)=>landskrona(g,w,d,m,-1)},
+  landskronaL:{name:'LANDSKRONA m. schäslong vänster',w:2.40,d:1.58,m:mat.landsk,b:(g,w,d,m)=>landskrona(g,w,d,m,1)},
+  sofa:{name:'Soffa',w:2.2,d:.9,m:mat.sofa,b:sofa},
+  armchair:{name:'Fåtölj',w:.8,d:.8,m:mat.textile,b:armchair},
+  bed:{name:'Säng',w:1.6,d:2.0,m:mat.duvet,b:bed},
+  nightstand:{name:'Sängbord',w:.4,d:.4,m:mat.white,b:(g,w,d,m)=>box(-w/2,w/2,0,.5,-d/2,d/2,m,g)},
+  dresser:{name:'Byrå',w:.8,d:.5,m:mat.white,b:(g,w,d,m)=>chest(g,w,d,.8,m,false)},
+  wardrobe:{name:'Garderob',w:1.0,d:.6,m:mat.white,b:(g,w,d,m)=>chest(g,w,d,2.1,m,true)},
+  table:{name:'Matbord',w:.9,d:1.6,m:mat.wood,b:(g,w,d,m)=>table(g,w,d,.74,m)},
+  coffee:{name:'Soffbord',w:1.1,d:.6,m:mat.darkwood,b:(g,w,d,m)=>table(g,w,d,.42,m)},
+  desk:{name:'Skrivbord',w:1.4,d:.6,m:mat.white,b:(g,w,d,m)=>table(g,w,d,.74,m)},
+  chair:{name:'Stol',w:.45,d:.45,m:mat.wood,b:chair},
+  tvbench:{name:'TV-bänk',w:1.7,d:.4,m:mat.darkwood,b:tvbench},
+  shelf:{name:'Bokhylla',w:1.8,d:.37,m:mat.white,b:shelf},
+  bench:{name:'Bänk',w:1.1,d:.35,m:mat.darkwood,b:(g,w,d,m)=>box(-w/2,w/2,0,.45,-d/2,d/2,m,g)},
+  rug:{name:'Matta',w:2.0,d:1.4,m:mat.rug,b:(g,w,d,m)=>box(-w/2,w/2,.012,.022,-d/2,d/2,m,g,false)},
+  plant:{name:'Växt',w:.4,d:.4,m:mat.plant,b:plant},
+  lamp:{name:'Golvlampa',w:.35,d:.35,m:mat.linen,b:lamp}
+};
+
+walls.traverse(o=>{o.receiveShadow=true;});
+
+// ---------- labels ----------
+const lblWrap=document.getElementById('labels');
+const labelItems=[];
+function addLabel(name,area,x,z,cls=''){const el=document.createElement('div');el.className='lbl '+cls;
+  el.innerHTML='<div class="n"></div>'+(area?'<div class="a"></div>':'');el.querySelector('.n').textContent=name;
+  if(area)el.querySelector('.a').textContent=area;lblWrap.appendChild(el);labelItems.push({el,v:new THREE.Vector3(x-CX,.05,z-CZ)});}
+const fmt=n=>n.toFixed(1).replace('.',',');
+for(const rm of rooms) addLabel(rm.name,'≈ '+fmt(rm.area)+' m²',rm.lab[0],rm.lab[1]);
+for(const c of ctxLabels) addLabel(c.name,'',c.p[0],c.p[1],'ctx');
+
+// ---------- room list ----------
+const ul=document.getElementById('rooms');
+for(const rm of rooms){const li=document.createElement('li');const b=document.createElement('button');b.setAttribute('aria-pressed','false');b.dataset.id=rm.id;
+  b.innerHTML='<span class="sw"></span><span class="nm"></span><span class="num"></span>';
+  b.querySelector('.sw').style.background=rm.col;b.querySelector('.nm').textContent=rm.name;b.querySelector('.num').textContent=fmt(rm.area)+' m²';
+  b.addEventListener('click',()=>enterRoom(rm,b));li.appendChild(b);ul.appendChild(li);}
+
+// ---------- camera animation ----------
+let anim=null;
+function flyTo(pos,target,ms=900,fov=45){anim={p0:camera.position.clone(),t0:controls.target.clone(),p1:pos,t1:target,f0:camera.fov,f1:fov,start:performance.now(),ms};}
+const W=(x,y,z)=>new THREE.Vector3(x-CX,y,z-CZ);
+const presets={
+  '3d':()=>flyTo(new THREE.Vector3(7.5,11.5,11.5),new THREE.Vector3(0,0,0.3)),
+  'plan':()=>flyTo(new THREE.Vector3(0,16.5,0.9),new THREE.Vector3(0,0,0.3))};
+function setSeg(id){for(const b of document.querySelectorAll('.seg:not(.kseg) button'))b.setAttribute('aria-pressed',String(b.id===id));}
+function clearRooms(){for(const b of ul.querySelectorAll('button'))b.setAttribute('aria-pressed','false');}
+document.getElementById('v3d').onclick=()=>{setLbl(true);setSeg('v3d');controls.autoRotate=false;clearRooms();presets['3d']();};
+document.getElementById('vplan').onclick=()=>{setLbl(true);setSeg('vplan');controls.autoRotate=false;clearRooms();presets['plan']();};
+document.getElementById('vrot').onclick=()=>{setSeg('vrot');clearRooms();presets['3d']();controls.autoRotate=true;controls.autoRotateSpeed=1.2;};
+const tL=document.getElementById('tLbl');function setLbl(on){tL.checked=on;lblWrap.hidden=!on;}
+function enterRoom(rm,btn){clearRooms();setLbl(false);btn.setAttribute('aria-pressed','true');setSeg('');controls.autoRotate=false;
+  const e=W(rm.eye[0],1.6,rm.eye[1]), t=W(rm.look[0],1.0,rm.look[1]);
+  const d=t.clone().sub(e).normalize(); flyTo(e,e.clone().add(d.multiplyScalar(0.6)),900,68);}
+
+// ---------- controls ----------
+const wh=document.getElementById('wallh'),whv=document.getElementById('wallhv');
+wh.addEventListener('input',()=>{markShadow();const v=+wh.value;clip.constant=v>=2.69?H+0.01:v;whv.textContent=v.toFixed(2).replace('.',',')+' m';});
+document.getElementById('tFurn').addEventListener('change',e=>{markShadow();furn.visible=e.target.checked;if(!furn.visible)select(null);});
+document.getElementById('tLbl').addEventListener('change',e=>{lblWrap.hidden=!e.target.checked;});
+
+
+// ---------- shared furnishing (Firestore) ----------
+const COL='lgh35_layouts';
+const $=id=>document.getElementById(id);
+const itemsMap=new Map();
+let moveMode=false,lastMove=null,sel=null,dragging=null,downAt=null,canEdit=true,db=null,layoutId=null,layouts=[],unsubItems=null,lastDel=null,nudgeT=null,delArm=null;
+const snap=v=>Math.round(v/0.05)*0.05, r3=v=>Math.round(v*1000)/1000;
+const clampX=v=>Math.min(10.1,Math.max(-1.35,v)), clampZ=v=>Math.min(10.25,Math.max(-0.3,v));
+const fm=v=>v.toFixed(2).replace('.',',');
+const normRot=r=>{r=((r%360)+360)%360;return r>180?r-360:r;};
+const selBox=new THREE.BoxHelper(undefined,0xe0a030); selBox.visible=false; scene.add(selBox);
+function itemPath(id){return COL+'/'+layoutId+'/items/'+id;}
+function place(g,d){markShadow();g.position.set(+d.x||0,Math.min(2.5,Math.max(0,+d.y||0)),+d.z||0);g.rotation.y=(+d.rot||0)*Math.PI/180;}
+function buildItem(id,d){const t=CAT[d.type];if(!t)return null;const g=new THREE.Group();g.userData.itemId=id;
+  const w=Math.min(6,Math.max(.1,+d.w||t.w)),dd=Math.min(6,Math.max(.1,+d.d||t.d));t.b(g,w,dd,colMat(d.color,t.m));g.updateMatrixWorld(true);const ms=[];g.traverse(o=>{if(o.isMesh&&!o.userData.noMerge&&!o.material.transparent)ms.push(o);});mergeMeshes(g,ms);place(g,d);furn.add(g);markShadow();return g;}
+function upsert(id,d){const key=[d.type,d.w,d.d,d.color].join('|');let it=itemsMap.get(id);
+  if(it&&it.key===key){it.d=d;if(!(dragging&&dragging.id===id))place(it.g,d);}
+  else{if(it)furn.remove(it.g);lamps.delete('f:'+id);const g=buildItem(id,d);if(!g){itemsMap.delete(id);return;}
+    if(dragging&&dragging.id===id&&it){g.position.copy(it.g.position);}
+    itemsMap.set(id,{d,g,key});}
+  if(sel===id)showSel();}
+function removeItem(id){const it=itemsMap.get(id);if(it){furn.remove(it.g);markShadow();}lamps.delete('f:'+id);itemsMap.delete(id);if(sel===id)select(null);}
+function clearItems(){for(const id of[...itemsMap.keys()])removeItem(id);}
+function setStatus(t,err){const el=$('fStatus');el.textContent=t||'';el.classList.toggle('err',!!err);}
+function fail(e){const c=e&&e.code;
+  if(c==='permission-denied'||c==='invalid_argument'){setReadOnly();setStatus('Du har inte behörighet att ändra möbleringen.',true);}
+  else if(c==='quota_exceeded')setStatus('Lagringen är full. Ta bort möbler eller varianter.',true);
+  else if(c==='resource_exhausted'||c==='resource-exhausted')setStatus('För många ändringar på kort tid. Vänta en stund.',true);
+  else if(c==='not-found')setStatus('Möbeln finns inte längre – någon annan har tagit bort den.',true);
+  else setStatus('Kunde inte spara. Kontrollera nätverket och försök igen.',true);}
+function setReadOnly(){canEdit=false;$('furnSec').classList.add('ro');$('fHint').textContent='Du kan titta på möbleringen men inte ändra den.';}
+const pend=new Map(),busy=new Set();
+async function persist(id,patch){if(!db)return;const path=itemPath(id);pend.set(path,{...(pend.get(path)||{}),...patch});if(busy.has(path))return;busy.add(path);setStatus('Sparar…');
+  try{while(pend.has(path)){const p=pend.get(path);pend.delete(path);await db.doc(path).update(p);}setStatus('Sparat');}
+  catch(e){pend.delete(path);fail(e);}finally{busy.delete(path);}}
+function localPatch(id,patch){const it=itemsMap.get(id);if(!it)return;upsert(id,{...it.d,...patch});}
+function select(id){sel=id&&itemsMap.has(id)?id:null;selBox.visible=!!sel;$('selCard').hidden=!sel;if(sel)showSel();}
+function showSel(){const it=itemsMap.get(sel);if(!it)return;const t=CAT[it.d.type]||{name:it.d.type,m:mat.white};
+  selBox.setFromObject(it.g);$('selName').textContent=t.name;
+  $('selPos').textContent=fm(it.g.position.x)+' / '+fm(it.g.position.z)+' m · '+Math.round(+it.d.rot||0)+'°';
+  const wEl=$('selW'),dEl=$('selD');if(document.activeElement!==wEl)wEl.value=Math.round((+it.d.w||t.w)*1000);if(document.activeElement!==dEl)dEl.value=Math.round((+it.d.d||t.d)*1000);
+  $('selColor').value=(typeof it.d.color==='string'&&/^#[0-9a-f]{6}$/i.test(it.d.color))?it.d.color:'#'+t.m.color.getHexString();}
+function rotateSel(delta){if(!sel||!canEdit)return;const it=itemsMap.get(sel);const rot=normRot((+it.d.rot||0)+delta);localPatch(sel,{rot});persist(sel,{rot});}
+async function ensureLayout(){if(layouts.some(l=>l.id===layoutId))return;await db.doc(COL+'/'+layoutId).set({name:layoutId==='nuvarande'?'Nuvarande':layoutId,order:0});}
+async function addItem(type,at,extra){const t=CAT[type];if(!t||!db||!canEdit)return;
+  const p=at||{x:controls.target.x+CX,z:controls.target.z+CZ};
+  const data={type,x:r3(snap(clampX(p.x))),z:r3(snap(clampZ(p.z))),rot:0,w:t.w,d:t.d,...(extra||{})};
+  const ref=db.collection(COL+'/'+layoutId+'/items').doc();upsert(ref.id,data);select(ref.id);setStatus('Sparar…');
+  try{await ensureLayout();await ref.set(data);setStatus('Sparat');}catch(e){removeItem(ref.id);fail(e);}}
+async function deleteSel(){if(!sel||!canEdit)return;const id=sel,it=itemsMap.get(id);lastMove=null;lastDel={path:itemPath(id),id,data:{...it.d}};removeItem(id);
+  try{await db.doc(lastDel.path).delete();setStatus('Borttagen');$('undoBtn').hidden=false;}catch(e){upsert(id,lastDel.data);lastDel=null;fail(e);}}
+$('undoBtn').onclick=async()=>{if(lastMove){const L=lastMove;lastMove=null;$('undoBtn').hidden=true;if(itemsMap.has(L.id)){localPatch(L.id,{x:L.x,z:L.z,rot:L.rot});persist(L.id,{x:L.x,z:L.z,rot:L.rot});setStatus('Flytten är ångrad');}return;}if(!lastDel)return;const L=lastDel;lastDel=null;$('undoBtn').hidden=true;
+  try{await db.doc(L.path).set(L.data);if(L.path===itemPath(L.id)){upsert(L.id,L.data);select(L.id);}setStatus('Återställd');}catch(e){fail(e);}};
+
+// panel controls
+for(const [k,t] of Object.entries(CAT)){const o=document.createElement('option');o.value=k;o.textContent=t.name+' ('+Math.round(t.w*100)+'×'+Math.round(t.d*100)+' cm)';$('addType').appendChild(o);}
+$('addBtn').onclick=()=>addItem($('addType').value);
+$('tMove').addEventListener('change',e=>{moveMode=e.target.checked;if(canEdit&&itemsMap.size)$('fHint').textContent=moveMode?'Klicka på en möbel för att välja den, dra den sedan för att flytta. R vrider 90°, piltangenter flyttar 5 cm, Delete tar bort.':'Rotera och zooma fritt – möblerna ligger still. Klicka på en möbel för att se den. Slå på Flytta möbler för att ändra.';});
+$('importBtn').onclick=()=>{$('importForm').hidden=false;$('importText').focus();};
+$('importCancel').onclick=()=>{$('importForm').hidden=true;};
+$('importForm').addEventListener('submit',async e=>{e.preventDefault();if(!db||!canEdit||!layoutId)return;
+  let obj;try{obj=JSON.parse($('importText').value);}catch(err){setStatus('Texten är inte giltig JSON. Kopiera hela blocket och försök igen.',true);return;}
+  const items=obj&&typeof obj.items==='object'&&obj.items?obj.items:null;if(!items){setStatus('Hittade inga möbler i texten ("items" saknas).',true);return;}
+  const wb=db.batch();let n=0,bad=0;
+  for(const [id,it] of Object.entries(items)){if(!/^[A-Za-z0-9_-]{1,60}$/.test(id)){bad++;continue;}
+    const ref=db.doc(COL+'/'+layoutId+'/items/'+id);
+    if(it===null){wb.delete(ref);n++;continue;}
+    if(!it||!CAT[it.type]||!isFinite(+it.x)||!isFinite(+it.z)){bad++;continue;}
+    const t=CAT[it.type];const data={type:it.type,x:r3(clampX(+it.x)),z:r3(clampZ(+it.z)),rot:normRot(+it.rot||0),w:Math.min(6,Math.max(.1,+it.w||t.w)),d:Math.min(6,Math.max(.1,+it.d||t.d))};
+    if(+it.y>0)data.y=r3(Math.min(2.5,+it.y));
+    if(typeof it.color==='string'&&/^#[0-9a-f]{6}$/i.test(it.color))data.color=it.color;
+    wb.set(ref,data);n++;}
+  if(!n){setStatus('Inget att importera.',true);return;}
+  try{await ensureLayout();await wb.commit();select(null);$('importForm').hidden=true;$('importText').value='';setStatus(n+' ändringar importerade'+(bad?', '+bad+' hoppades över':'')+'.');}catch(err){fail(err);}});
+$('rotL').onclick=()=>rotateSel(15); $('rotR').onclick=()=>rotateSel(-90);
+$('delBtn').onclick=deleteSel;
+$('dupBtn').onclick=()=>{const it=itemsMap.get(sel);if(!it)return;const d={...it.d};addItem(d.type,{x:it.g.position.x+.3,z:it.g.position.z+.3},{rot:+d.rot||0,w:d.w,d:d.d,...(d.color?{color:d.color}:{}),...(+d.y>0?{y:+d.y}:{})});};
+function sizeChange(){if(!sel||!canEdit)return;const w=Math.min(6000,Math.max(100,+$('selW').value||0))/1000,d=Math.min(6000,Math.max(100,+$('selD').value||0))/1000;
+  const it=itemsMap.get(sel);if(Math.abs(w-(+it.d.w))<1e-4&&Math.abs(d-(+it.d.d))<1e-4)return;localPatch(sel,{w,d});persist(sel,{w,d});}
+$('selW').addEventListener('change',sizeChange);$('selD').addEventListener('change',sizeChange);
+$('selColor').addEventListener('change',e=>{if(!sel||!canEdit)return;const color=e.target.value;localPatch(sel,{color});persist(sel,{color});});
+
+// layouts (variants)
+function renderLayouts(){const s=$('layoutSel');s.textContent='';const list=layouts.length?layouts:[{id:'nuvarande',name:'Nuvarande'}];
+  if(!list.some(l=>l.id===layoutId)&&layoutId)list.push({id:layoutId,name:layoutId});
+  for(const l of list){const o=document.createElement('option');o.value=l.id;o.textContent=(typeof l.name==='string'&&l.name)||l.id;s.appendChild(o);}
+  s.value=layoutId||list[0].id;$('delLayoutBtn').hidden=layouts.length<2;}
+function switchLayout(id){if(id===layoutId&&unsubItems)return;if(unsubItems)unsubItems();clearItems();layoutId=id;try{localStorage.setItem('lgh35-layout',id);}catch(e){}
+  renderLayouts();
+  unsubItems=db.collection(COL+'/'+id+'/items').onSnapshot(sn=>{for(const ch of sn.docChanges()){if(ch.type==='removed')removeItem(ch.doc.id);else upsert(ch.doc.id,ch.doc.data());}
+      $('fHint').hidden=false;if(canEdit)$('fHint').textContent=itemsMap.size?(moveMode?'Klicka på en möbel för att välja den, dra den sedan för att flytta. R vrider 90°, piltangenter flyttar 5 cm, Delete tar bort.':'Rotera och zooma fritt – möblerna ligger still. Klicka på en möbel för att se den. Slå på Flytta möbler för att ändra.'):'Den här varianten har inga möbler ännu. Välj en möbel ovan och tryck Lägg till.';},
+    e=>setStatus('Möbleringen kunde inte laddas. Ladda om sidan.',true));}
+$('layoutSel').addEventListener('change',e=>{select(null);switchLayout(e.target.value);});
+$('newLayoutBtn').onclick=()=>{$('newLayoutForm').hidden=false;$('newLayoutName').focus();};
+$('newLayoutCancel').onclick=()=>{$('newLayoutForm').hidden=true;};
+$('newLayoutForm').addEventListener('submit',async e=>{e.preventDefault();const name=$('newLayoutName').value.trim();if(!name)return;
+  const nid='v'+Date.now().toString(36);setStatus('Skapar variant…');
+  try{await ensureLayout();await db.doc(COL+'/'+nid).set({name,order:Date.now()});
+    await Promise.all([...itemsMap].map(([iid,it])=>db.doc(COL+'/'+nid+'/items/'+iid).set({...it.d})));
+    $('newLayoutForm').hidden=true;$('newLayoutName').value='';select(null);switchLayout(nid);setStatus('Variant skapad – en kopia av den förra');}catch(err){fail(err);}});
+$('delLayoutBtn').onclick=async()=>{const b=$('delLayoutBtn');
+  if(!delArm){delArm=setTimeout(()=>{delArm=null;b.textContent='Ta bort den här varianten';},4000);b.textContent='Klicka igen för att ta bort varianten';return;}
+  clearTimeout(delArm);delArm=null;b.textContent='Ta bort den här varianten';
+  const gone=layoutId,other=layouts.find(l=>l.id!==gone);if(!other)return;
+  try{await Promise.all([...itemsMap.keys()].map(iid=>db.doc(COL+'/'+gone+'/items/'+iid).delete()));await db.doc(COL+'/'+gone).delete();select(null);switchLayout(other.id);setStatus('Varianten är borttagen');}catch(e){fail(e);}};
+
+// pointer: pick, drag on the floor plane
+const cv=renderer.domElement, ray=new THREE.Raycaster(), ndc=new THREE.Vector2(), floorPl=new THREE.Plane(new THREE.Vector3(0,1,0),0), hitP=new THREE.Vector3();
+function setRay(e){const r=cv.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(ndc,camera);}
+function pickItem(){if(!furn.visible)return null;for(const h of ray.intersectObjects(furn.children,true)){let o=h.object;while(o&&!o.userData.itemId)o=o.parent;if(o)return o.userData.itemId;}return null;}
+function floorPt(){return ray.ray.intersectPlane(floorPl,hitP)?{x:hitP.x+CX,z:hitP.z+CZ}:null;}
+cv.addEventListener('pointerdown',e=>{if(walk.on||e.button!==0||dragging)return;setRay(e);const id=pickItem();downAt={x:e.clientX,y:e.clientY,id};
+  if(!id||id!==sel||!moveMode||!canEdit||!db)return;           // orbit/zoom never moves furniture
+  const p=floorPt();if(!p)return;const it=itemsMap.get(id);
+  dragging={id,ox:it.g.position.x-p.x,oz:it.g.position.z-p.z,x0:it.g.position.x,z0:it.g.position.z,rot0:+it.d.rot||0,moved:false,pid:e.pointerId,sx:e.clientX,sy:e.clientY};
+  controls.enabled=false;try{cv.setPointerCapture(e.pointerId);}catch(_){}e.preventDefault();},{capture:true});
+cv.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==dragging.pid)return;
+  if(!dragging.moved&&Math.hypot(e.clientX-dragging.sx,e.clientY-dragging.sy)<4)return;dragging.moved=true;
+  setRay(e);const p=floorPt();if(!p)return;const it=itemsMap.get(dragging.id);if(!it)return;
+  it.g.position.x=snap(clampX(p.x+dragging.ox));it.g.position.z=snap(clampZ(p.z+dragging.oz));showSel();markShadow();});
+function endDrag(e){if(walk.on)return;if(dragging&&e.pointerId===dragging.pid){const d=dragging;dragging=null;controls.enabled=true;downAt=null;const it=itemsMap.get(d.id);
+    if(d.moved&&it){const x=r3(it.g.position.x),z=r3(it.g.position.z);it.d={...it.d,x,z};lastDel=null;lastMove={id:d.id,x:r3(d.x0),z:r3(d.z0),rot:d.rot0};$('undoBtn').hidden=false;persist(d.id,{x,z});}return;}
+  if(downAt&&e.type==='pointerup'&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<4)select(downAt.id||null);downAt=null;}
+cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&(e.key==='z'||e.key==='Z')&&!$('undoBtn').hidden){const tg=e.target;if(!(tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA'))){$('undoBtn').click();e.preventDefault();return;}}if(!sel)return;const tg=e.target;if(tg&&(tg.tagName==='INPUT'||tg.tagName==='SELECT'||tg.tagName==='TEXTAREA'))return;
+  if(e.key==='Escape'){select(null);return;}if(!canEdit||!moveMode)return;
+  if(e.key==='r'||e.key==='R'){rotateSel(e.shiftKey?15:-90);e.preventDefault();}
+  else if(e.key==='Delete'||e.key==='Backspace'){deleteSel();e.preventDefault();}
+  else if(e.key.startsWith('Arrow')){const it=itemsMap.get(sel);const dx=e.key==='ArrowLeft'?-.05:e.key==='ArrowRight'?.05:0,dz=e.key==='ArrowUp'?-.05:e.key==='ArrowDown'?.05:0;
+    it.g.position.x=snap(clampX(it.g.position.x+dx));it.g.position.z=snap(clampZ(it.g.position.z+dz));showSel();markShadow();e.preventDefault();
+    clearTimeout(nudgeT);const id=sel;nudgeT=setTimeout(()=>{const t=itemsMap.get(id);if(!t)return;const x=r3(t.g.position.x),z=r3(t.g.position.z);t.d={...t.d,x,z};persist(id,{x,z});},400);}});
+
+// connect to Firebase (config in firebase-config.js)
+let unsubLayouts=null;
+function stopAll(){if(unsubLayouts){unsubLayouts();unsubLayouts=null;}if(unsubItems){unsubItems();unsubItems=null;}select(null);clearItems();layoutId=null;layouts=[];}
+$('seedBtn').onclick=async()=>{const b=$('seedBtn');b.disabled=true;setStatus('Lägger in…');
+  try{const seed=await (await fetch('seed.json',{cache:'no-store'})).json();const wb=db.batch();
+    for(const L of seed.layouts){wb.set(db.doc(COL+'/'+L.id),{name:L.name,order:L.order||0});for(const [iid,it] of Object.entries(L.items))wb.set(db.doc(COL+'/'+L.id+'/items/'+iid),it);}
+    await wb.commit();setStatus('Startmöbleringen är inlagd');}catch(e){b.disabled=false;fail(e);}};
+(function(){const cfg=window.FIREBASE_CONFIG;
+  if(!window.firebase||!cfg||!cfg.apiKey||/^DIN_/.test(cfg.apiKey)){$('fOff').textContent='Firebase är inte konfigurerat ännu. Fyll i firebase-config.js enligt README.';return;}
+  firebase.initializeApp(cfg);db=firebase.firestore();const auth=firebase.auth();
+  $('loginBtn').onclick=async()=>{const pr=new firebase.auth.GoogleAuthProvider();
+    try{await auth.signInWithPopup(pr);}catch(e){if(e&&(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'))auth.signInWithRedirect(pr);
+      else if(!(e&&e.code==='auth/popup-closed-by-user'))$('fOff').textContent='Inloggningen misslyckades ('+((e&&e.code)||'okänt fel')+').';}};
+  $('logoutBtn').onclick=()=>auth.signOut();
+  auth.onAuthStateChanged(u=>{stopAll();
+    if(!u){$('fOn').hidden=true;$('fOff').hidden=false;$('fOff').textContent='Logga in för att se och ändra möbleringen.';$('loginBtn').hidden=false;$('who').hidden=true;return;}
+    $('loginBtn').hidden=true;$('who').hidden=false;$('whoName').textContent=u.email||u.displayName||'okänt konto';
+    $('fOff').hidden=true;$('fOn').hidden=false;canEdit=true;$('furnSec').classList.remove('ro');setStatus('');
+    let stored=null;try{stored=localStorage.getItem('lgh35-layout');}catch(e){}
+    unsubLayouts=db.collection(COL).onSnapshot(sn=>{layouts=sn.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(+a.order||0)-(+b.order||0));
+        $('seedBtn').hidden=sn.size>0;
+        if(!layoutId){const pick=(stored&&layouts.some(l=>l.id===stored))?stored:(layouts.some(l=>l.id==='nuvarande')?'nuvarande':(layouts[0]?layouts[0].id:'nuvarande'));switchLayout(pick);}
+        else if(layouts.length&&!layouts.some(l=>l.id===layoutId)){select(null);switchLayout(layouts[0].id);}
+        else renderLayouts();},
+      e=>{if(e&&e.code==='permission-denied'){$('fOn').hidden=true;$('fOff').hidden=false;$('fOff').textContent='Kontot '+(u.email||'')+' har inte behörighet. Lägg till adressen i Firestore-reglerna (se README).';}
+        else setStatus('Möbleringen kunde inte laddas. Ladda om sidan.',true);});});
+})();
+
+$('kNow').onclick=()=>applyKitchen('now');$('kPlan').onclick=()=>applyKitchen('plan');
+{let k='now';try{k=localStorage.getItem('lgh35-kitchen')||'now';}catch(e){}applyKitchen(k);}
+
+
+// ---------- walk mode: first-person view at a person's eye height ----------
+const walk={on:false,yaw:0,pitch:0,keys:{},eye:1.66,joy:null,look:null,boxes:[],acc:0,last:0};
+const eyeFor=cm=>Math.round(Math.min(220,Math.max(100,cm||179))*0.93)/100;   // eyes ≈ 7 % below the top of the head
+function collectBoxes(){const out=[],b=new THREE.Box3(),pt=new THREE.Vector3();
+  // door leaves: sample along the leaf so a half-open door doesn't block its whole bounding box
+  for(const D of doors){const leaf=D.lg.children[0];if(!leaf||!leaf.geometry)continue;leaf.updateWorldMatrix(true,false);const hw=leaf.geometry.parameters.width/2;
+    for(let k=0;k<=6;k++){pt.set(-hw+2*hw*k/6,0,0).applyMatrix4(leaf.matrixWorld);out.push([pt.x-.03,pt.x+.03,pt.z-.03,pt.z+.03]);}}
+  const add=o=>{if(o.material===mat.poche||o.isLight||o.userData.isDoorPivot)return;b.setFromObject(o);if(b.isEmpty())return;if(b.min.y<0.5&&b.max.y>0.3)out.push([b.min.x,b.max.x,b.min.z,b.max.z]);};
+  for(const q of STATIC_BOXES)out.push(q);if(furn.visible)furn.children.forEach(add);walk.boxes=out;}
+function blocked(x,z){const r=.2;for(const q of walk.boxes)if(x>q[0]-r&&x<q[1]+r&&z>q[2]-r&&z<q[3]+r)return true;return false;}
+function walkStep(dt){const k=walk.keys;walk.acc+=dt;if(walk.acc>1){walk.acc=0;collectBoxes();}
+  let f=(k.KeyW||k.ArrowUp?1:0)-(k.KeyS||k.ArrowDown?1:0),sd=(k.KeyD?1:0)-(k.KeyA?1:0);
+  walk.yaw-=((k.ArrowRight?1:0)-(k.ArrowLeft?1:0))*1.8*dt;
+  if(walk.joy){f-=walk.joy.y;sd+=walk.joy.x;}
+  const len=Math.hypot(f,sd);if(len>1){f/=len;sd/=len;}
+  const sp=(k.ShiftLeft||k.ShiftRight?2.6:1.4)*dt,sn=Math.sin(walk.yaw),cs=Math.cos(walk.yaw);
+  const dx=(-sn*f+cs*sd)*sp,dz=(-cs*f-sn*sd)*sp,p=camera.position,stuck=blocked(p.x,p.z);
+  if(dx&&(!blocked(p.x+dx,p.z)||stuck))p.x+=dx; if(dz&&(!blocked(p.x,p.z+dz)||stuck))p.z+=dz;
+  p.y=walk.eye;camera.rotation.set(walk.pitch,walk.yaw,0,'YXZ');}
+function enterWalk(){if(walk.on)return;walk.on=true;anim=null;controls.enabled=false;controls.autoRotate=false;select(null);clearRooms();setSeg('');
+  walk.eye=eyeFor(+$('walkH').value);try{localStorage.setItem('lgh35-height',$('walkH').value);}catch(e){}
+  collectBoxes();
+  // start where the view is centred if that spot is inside the flat and free, otherwise in the hall facing the smyg
+  let x=controls.target.x,z=controls.target.z,mx=x+CX,mz=z+CZ,yaw=Math.atan2(camera.position.x-x,camera.position.z-z);
+  if(!(mx>0.2&&mx<9.6&&mz>0.2&&mz<9.8)||blocked(x,z)){x=6.45-CX;z=1.7-CZ;yaw=Math.PI*0.75;}
+  walk.yaw=yaw;walk.pitch=0;camera.position.set(x,walk.eye,z);camera.rotation.order='YXZ';camera.fov=72;camera.updateProjectionMatrix();
+  lblWrap.hidden=true;$('walkUI').hidden=false;$('walkBtn').setAttribute('aria-pressed','true');}
+function exitWalk(){if(!walk.on)return;walk.on=false;walk.keys={};walk.joy=null;walk.look=null;$('knob').style.transform='';
+  $('walkUI').hidden=true;$('walkBtn').setAttribute('aria-pressed','false');camera.rotation.order='XYZ';
+  const dir=new THREE.Vector3(-Math.sin(walk.yaw),0,-Math.cos(walk.yaw));controls.target.copy(camera.position).add(dir.multiplyScalar(.6));
+  controls.enabled=true;setSeg('');}
+$('walkBtn').onclick=()=>walk.on?exitWalk():enterWalk();$('walkExit').onclick=exitWalk;
+$('walkH').addEventListener('change',()=>{walk.eye=eyeFor(+$('walkH').value);try{localStorage.setItem('lgh35-height',$('walkH').value);}catch(e){}});
+try{const h=localStorage.getItem('lgh35-height');if(h)$('walkH').value=h;}catch(e){}
+for(const id of['v3d','vplan','vrot'])$(id).addEventListener('click',()=>{if(walk.on){walk.on=false;walk.keys={};walk.joy=null;$('walkUI').hidden=true;$('walkBtn').setAttribute('aria-pressed','false');camera.rotation.order='XYZ';controls.enabled=true;}},{capture:true});
+for(const b of ul.querySelectorAll('button'))b.addEventListener('click',()=>{if(walk.on)exitWalk();},{capture:true});
+// look by dragging
+cv.addEventListener('pointerdown',e=>{if(!walk.on)return;walk.look={id:e.pointerId,x:e.clientX,y:e.clientY};try{cv.setPointerCapture(e.pointerId);}catch(_){}});
+cv.addEventListener('pointermove',e=>{const L=walk.look;if(!walk.on||!L||e.pointerId!==L.id)return;
+  walk.yaw-=(e.clientX-L.x)*.0045;walk.pitch=Math.max(-1.3,Math.min(1.3,walk.pitch-(e.clientY-L.y)*.0045));L.x=e.clientX;L.y=e.clientY;});
+const endLook=e=>{if(walk.look&&e.pointerId===walk.look.id)walk.look=null;};cv.addEventListener('pointerup',endLook);cv.addEventListener('pointercancel',endLook);
+// touch joystick
+const joyEl=$('joy'),knob=$('knob');let joyId=null;
+function moveJoy(e){const r=joyEl.getBoundingClientRect();let x=(e.clientX-r.left-r.width/2)/(r.width/2),y=(e.clientY-r.top-r.height/2)/(r.height/2);
+  const l=Math.hypot(x,y);if(l>1){x/=l;y/=l;}walk.joy={x,y};knob.style.transform='translate('+(x*34)+'px,'+(y*34)+'px)';}
+joyEl.addEventListener('pointerdown',e=>{joyId=e.pointerId;try{joyEl.setPointerCapture(e.pointerId);}catch(_){}moveJoy(e);e.preventDefault();});
+joyEl.addEventListener('pointermove',e=>{if(e.pointerId===joyId)moveJoy(e);});
+const endJoy=e=>{if(e.pointerId!==joyId)return;joyId=null;walk.joy=null;knob.style.transform='';};
+joyEl.addEventListener('pointerup',endJoy);joyEl.addEventListener('pointercancel',endJoy);
+// keyboard
+document.addEventListener('keydown',e=>{if(!walk.on)return;const tg=e.target;if(tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA'||tg.tagName==='SELECT'))return;
+  if(e.key==='Escape'){exitWalk();return;}walk.keys[e.code]=true;if(e.code.startsWith('Arrow')||e.code==='Space')e.preventDefault();});
+document.addEventListener('keyup',e=>{walk.keys[e.code]=false;});window.addEventListener('blur',()=>{walk.keys={};});
+
+
+// ---------- doors: click a door leaf to open/close it (remembered per browser) ----------
+{let dn=null;const cvd=renderer.domElement,rc=new THREE.Raycaster(),v2=new THREE.Vector2();
+ const doorMeshes=[];walls.traverse(m=>{if(m.isMesh&&m.userData.doorIdx!==undefined)doorMeshes.push(m);});
+ cvd.addEventListener('pointerdown',e=>{dn={x:e.clientX,y:e.clientY};},{capture:true});
+ cvd.addEventListener('pointerup',e=>{if(!dn||Math.hypot(e.clientX-dn.x,e.clientY-dn.y)>5){dn=null;return;}dn=null;
+   const r=cvd.getBoundingClientRect();v2.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);rc.setFromCamera(v2,camera);
+   const lh=rc.intersectObjects(scene.children,true).find(x=>x.object.visible&&x.object.material!==mat.poche);
+   if(lh&&lh.distance<14){let o=lh.object,k;while(o&&!(k=o.userData.lampKey))o=o.parent;
+     if(k&&lamps.has(k)){const L=lamps.get(k);setLamp(L,!L.on);try{localStorage.setItem('lgh35-lamp-'+k,L.on?'1':'0');}catch(_){}return;}}
+   const h=rc.intersectObjects(doorMeshes,false)[0];if(!h||h.distance>12)return;
+   const D=doors[h.object.userData.doorIdx];D.tgt=D.tgt>.5?0:1;try{localStorage.setItem('lgh35-door-'+D.id,String(D.tgt));}catch(_){}});}
+
+// ---------- sun: Gothenburg 57.7°N 11.97°E, balcony facing 240° (model -x) ----------
+// compass → model: bearing b gives dir = cos b·N + sin b·E with N=(0.5,0,-0.866), E=(0.866,0,0.5)
+const LAT=57.7,LON=11.97,NV=new THREE.Vector3(.5,0,-.8660254),EV=new THREE.Vector3(.8660254,0,.5);
+// invisible roof so the sun only reaches the rooms through the windows
+{const rm=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false});
+ for(const q of [[-0.3,10.13,-0.25,5.46],[1.26,10.13,5.46,10.27]]){const r=box(q[0],q[1],H,H+.06,q[2],q[3],rm,ctx);r.castShadow=true;r.receiveShadow=false;r.renderOrder=-1;}}
+function stockholmOffset(y,m,d,h){const lastSun=mo=>{const t=new Date(Date.UTC(y,mo,0));return t.getUTCDate()-t.getUTCDay();};
+  const u=Date.UTC(y,m-1,d,h)-3600e3,a=Date.UTC(y,2,lastSun(3),1),b=Date.UTC(y,9,lastSun(10),1);return (u>=a&&u<b)?2:1;}
+function sunPos(dateStr,hours){const [y,m,d]=dateStr.split('-').map(Number);const off=stockholmOffset(y,m,d,hours);
+  const t=Date.UTC(y,m-1,d)+(hours-off)*3600e3,D=(t-Date.UTC(2000,0,1,12))/864e5,rad=Math.PI/180;
+  const g=(357.529+.98560028*D)*rad,q=280.459+.98564736*D,L=(q+1.915*Math.sin(g)+.02*Math.sin(2*g))*rad,e=(23.439-.00000036*D)*rad;
+  const ra=Math.atan2(Math.cos(e)*Math.sin(L),Math.cos(L)),dec=Math.asin(Math.sin(e)*Math.sin(L));
+  const gmst=((18.697374558+24.06570982441908*D)%24+24)%24,H_=((gmst*15+LON)*rad-ra),la=LAT*rad;
+  const el=Math.asin(Math.sin(la)*Math.sin(dec)+Math.cos(la)*Math.cos(dec)*Math.cos(H_));
+  let az=Math.atan2(-Math.sin(H_),Math.tan(dec)*Math.cos(la)-Math.sin(la)*Math.cos(H_))/rad;az=(az+360)%360;return {el:el/rad,az};}
+const skyAmb=new THREE.AmbientLight(0xffffff,0);scene.add(skyAmb);
+const sunCol=new THREE.Color(),warmC=new THREE.Color(0xffc896),whiteC=new THREE.Color(0xffffff);
+function updateSun(){markShadow();const ds=$('sunD').value,h=+$('sunT').value;const {el,az}=sunPos(ds,h);
+  const b=az*Math.PI/180,dir=NV.clone().multiplyScalar(Math.cos(b)).add(EV.clone().multiplyScalar(Math.sin(b)));
+  const er=Math.max(el,.5)*Math.PI/180;sun.position.set(dir.x*Math.cos(er)*25,Math.sin(er)*25,dir.z*Math.cos(er)*25);
+  const day=Math.min(1,Math.max(0,(el+4)/14));DARK=EVE||day<.35;const s=EVE?0:Math.min(1,Math.max(0,Math.sin(el*Math.PI/180)*2.2));
+  sunCol.copy(warmC).lerp(whiteC,Math.min(1,Math.max(0,el/8)));sun.color.copy(sunCol);
+  const PI=Math.PI;sun.intensity=s*2.6*PI;hemi.intensity=(EVE?.12:.06+.3*day)*PI;fill.intensity=(EVE?0:.1*day)*PI;skyAmb.intensity=0;scene.environmentIntensity=EVE?.03:.12+.38*day;
+  for(const L of lamps.values())setLamp(L,L.on);
+  const hh=Math.floor(h)%24,mm=Math.round((h-Math.floor(h))*60);$('sunV').textContent=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+  $('sunInfo').textContent=el>0?('Solen står i '+Math.round(az)+'° (balkongen 240°), '+Math.round(el)+'° över horisonten'):'Solen har gått ner';}
+{const n=new Date(),pad=v=>String(v).padStart(2,'0');$('sunD').value=n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());}
+function clearEve(){if(EVE){EVE=false;$('tEve').checked=false;}}
+$('sunT').addEventListener('input',()=>{clearEve();updateSun();});$('sunD').addEventListener('change',()=>{clearEve();if(!$('sunD').value){const n=new Date();$('sunD').valueAsDate=n;}updateSun();});
+let sunAnim=null;$('sunPlay').onclick=()=>{clearEve();if(sunAnim){clearInterval(sunAnim);sunAnim=null;$('sunPlay').textContent='Spela dag';return;}
+  $('sunPlay').textContent='Stopp';let t=+$('sunT').value;if(t>=21.5)t=5;sunAnim=setInterval(()=>{t+=.05;if(t>22){clearInterval(sunAnim);sunAnim=null;$('sunPlay').textContent='Spela dag';return;}$('sunT').value=t;updateSun();},40);};
+function updateCompass(){const phi=walk.on?walk.yaw:controls.getAzimuthalAngle();const u={x:-Math.sin(phi),z:-Math.cos(phi)},r={x:Math.cos(phi),z:-Math.sin(phi)};
+  const sx=NV.x*r.x+NV.z*r.z,sy=NV.x*u.x+NV.z*u.z;$('compassRot').setAttribute('transform','rotate('+(Math.atan2(sx,sy)*180/Math.PI).toFixed(1)+')');}
+
+// ---------- evening mode: force night so the lamps carry the room ----------
+function applyEve(on){EVE=on;updateSun();}
+$('tEve').addEventListener('change',e=>applyEve(e.target.checked));
+try{localStorage.removeItem('lgh35-eve');}catch(e){}
+updateSun();
+
+// ---------- theme-aware background ----------
+function applyBg(){const c=getComputedStyle(document.documentElement).getPropertyValue('--scene').trim()||'#e6e9e8';scene.background=new THREE.Color(c);}
+applyBg(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyBg);
+new MutationObserver(applyBg).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+// ---------- loop ----------
+function resize(){const w=view.clientWidth,h=view.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/Math.max(h,1);camera.updateProjectionMatrix();}
+new ResizeObserver(resize).observe(view); resize();
+camera.position.set(7.5,11.5,11.5); controls.target.set(0,0,.3);
+const tmp=new THREE.Vector3();
+function tick(now){updateCompass();if(shadowDirty){renderer.shadowMap.needsUpdate=true;shadowDirty=false;}
+  for(const D of doors){if(D.cur!==D.tgt){const st=.06;D.cur=Math.abs(D.tgt-D.cur)<st?D.tgt:D.cur+Math.sign(D.tgt-D.cur)*st;D.lg.rotation.y=D.base+D.kk*D.ang*D.cur;markShadow();if(D.cur===D.tgt&&walk.on)collectBoxes();}}
+  if(anim&&!walk.on){let k=Math.min(1,(now-anim.start)/anim.ms);k=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+    camera.position.lerpVectors(anim.p0,anim.p1,k);controls.target.lerpVectors(anim.t0,anim.t1,k);camera.fov=anim.f0+(anim.f1-anim.f0)*k;camera.updateProjectionMatrix();if(k>=1)anim=null;}
+  if(walk.on)walkStep(Math.min(.1,(now-(walk.last||now))/1000));else controls.update();walk.last=now; if(sel&&selBox.visible){const it=itemsMap.get(sel);if(it)selBox.setFromObject(it.g);} (window.__composer?window.__composer.render():renderer.render(scene,camera));
+  if(!lblWrap.hidden){const w=view.clientWidth,h=view.clientHeight;
+    for(const L of labelItems){tmp.copy(L.v).project(camera);const vis=tmp.z<1&&tmp.z>-1&&Math.abs(tmp.x)<1.1&&Math.abs(tmp.y)<1.1;
+      const dist=camera.position.distanceTo(L.v);
+      L.el.style.display=vis&&dist>1.2?'':'none'; if(vis)L.el.style.left=((tmp.x+1)/2*w)+'px',L.el.style.top=((1-tmp.y)/2*h)+'px';}}
+  requestAnimationFrame(tick);}
+freezeStatic();
+{const pm=new THREE.PMREMGenerator(renderer);scene.environment=pm.fromScene(new MODERN.RoomEnvironment(),.04).texture;}
+// world-scale planar UVs on floors so planks are 14 cm wide everywhere (1024px texture = 6 planks)
+scene.traverse(o=>{if(!o.isMesh||o.material!==mat.oak)return;const g=o.geometry,p=g.attributes.position,uv=g.attributes.uv,v=new THREE.Vector3();o.updateMatrixWorld();
+  for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);uv.setXY(i,v.x/.84,v.z/4.0);}uv.needsUpdate=true;});
+const composer=new MODERN.EffectComposer(renderer);composer.addPass(new MODERN.RenderPass(scene,camera));
+const gtao=new MODERN.GTAOPass(scene,camera,view.clientWidth,view.clientHeight);gtao.updateGtaoMaterial({radius:.35,distanceExponent:1.4,thickness:1,scale:1.2});gtao.blendIntensity=.9;composer.addPass(gtao);
+composer.addPass(new MODERN.OutputPass());window.__composer=composer;
+{const r0=resize;new ResizeObserver(()=>{composer.setSize(view.clientWidth,view.clientHeight);}).observe(view);composer.setSize(view.clientWidth,view.clientHeight);}
+requestAnimationFrame(tick);
+if(matchMedia('(prefers-reduced-motion: reduce)').matches){controls.enableDamping=false;}
+})();
+</script>
+</body>
+</html>
