@@ -119,7 +119,7 @@ textarea{box-sizing:border-box;width:100%;font-family:var(--mono);font-size:12px
     <header>
       <div class="eyebrow">Planritning → 3D · LGH 35</div>
       <h1>Lägenhet 35</h1>
-      <div class="stats"><span><b>79,4</b> m² BOA</span><span><b>3</b> rok</span><span><b>+11</b> m² balkong</span></div>
+      <div class="stats"><span><b>79,4</b> m² BOA</span><span><b>3</b> rok</span><span><b>+15</b> m² balkong</span></div>
     </header>
 
     <section class="ctrl" aria-label="Visning">
@@ -335,7 +335,7 @@ wallRun('z',3.02,10.02,5.67,5.77,[{a:4.65,b:5.45,type:'door',hinge:'a',side:1,op
 wallRun('x',5.77,9.78,6.45,6.62);
 
 // French balcony rail
-box(-0.95,-0.3,0,1.8,-0.27,-0.23,mat.frost,ctx); // balcony divider to neighbour
+box(-1.37,-0.3,0,1.8,-0.27,-0.23,mat.frost,ctx); // balcony divider to neighbour
 
 // ---------- floors ----------
 box(-0.3,10.13,-0.22,-0.0,-0.25,10.27,mat.slab,ctx,false);
@@ -354,14 +354,14 @@ const rooms=[
  {id:'wc',name:'WC',r:[[3.23,5.06,0,1.9]],floor:'tile',lab:[4.4,1.2],eye:[4.85,1.75],look:[3.35,0.2],col:'#b5babb'},
  {id:'hall',name:'Hall',r:[[5.72,7.55,0.84,3.02]],floor:'oak',lab:[6.5,1.7],eye:[6.4,2.95],look:[6.5,0.85],col:'#e0c8a6'},
  {id:'klk',name:'Klädkammare',r:[[5.77,7.55,3.12,4.51]],floor:'oak',lab:[6.75,3.75],eye:[6.35,3.2],look:[7.4,4.45],col:'#a8835e'},
- {id:'balk',name:'Balkong',r:[[-0.93,1.26,5.46,9.06],[-0.93,-0.3,-0.25,5.46]],floor:'deck',lab:[0.15,7.4],eye:[-0.6,8.9],look:[1.0,5.8],col:'#8a7a66',outside:1}
+ {id:'balk',name:'Balkong',r:[[-1.35,1.26,5.46,9.06],[-1.35,-0.3,-0.25,5.46]],floor:'deck',lab:[0.0,7.0],eye:[-1.1,8.8],look:[0.6,4.0],col:'#8a7a66',outside:1}
 ];
 for(const rm of rooms){ rm.area=rm.r.reduce((s,q)=>s+(q[1]-q[0])*(q[3]-q[2]),0);
   for(const q of rm.r){ if(rm.outside) box(q[0],q[1],-0.15,-0.05,q[2],q[3],mat.deck,ctx,false);
     else box(q[0],q[1],0,0.012,q[2],q[3],rm.floor==='tile'?texMat(floorTileTex,q[1]-q[0],q[3]-q[2],1.6,{roughness:.5}):mat[rm.floor],ctx,false);}}
 // balcony railing
-box(-0.95,-0.91,-0.05,1.1,-0.25,9.08,mat.glass,ctx,false); box(-0.97,-0.89,1.06,1.1,-0.25,9.08,mat.rail,ctx);
-box(-0.95,1.26,-0.05,1.1,9.04,9.08,mat.glass,ctx,false); box(-0.97,1.26,1.06,1.1,9.02,9.1,mat.rail,ctx);
+const perf=M(0xf2f2f0,{roughness:.6,transparent:true,opacity:.82});box(-1.38,-1.35,0,1.0,-0.25,9.08,perf,ctx,false); box(-1.4,-1.33,1.06,1.1,-0.25,9.08,mat.rail,ctx);
+box(-1.38,1.26,0,1.0,9.04,9.08,perf,ctx,false); box(-1.4,1.26,1.06,1.1,9.02,9.1,mat.rail,ctx);
 // context: stairwell + lift shaft
 box(5.72,7.8,-0.2,0.0,-1.9,0.59,mat.ctx,ctx,false); box(7.8,10.13,-0.2,0.6,-0.6,3.53,mat.ctx2,ctx);
 const ctxLabels=[{name:'Trapphus',p:[6.7,-0.8]},{name:'Hisschakt',p:[9.0,1.5]}];
@@ -680,7 +680,36 @@ function uplight(g,w,d,m){const r=Math.min(w,d)/2;cyl(0,0,r*.95,0,.012,m,g);cyl(
   const gm=glowMat(0xfff4e6,0xf0eeea);const sh=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.32,.32,28,1,true),gm);sh.position.y=1.52;g.add(sh);lampOf(g,[0,1.75,0],WARM,.8,3.5,[gm]);}
 function bumling(g,w,d,m){const r=Math.min(w,d)/2;cyl(0,0,.006,1.92,H,mat.steel,g);const s1=cyl(0,0,r*.72,1.84,1.92,m,g);const s2=cyl(0,0,r,1.72,1.85,m,g);
   const gm=glowMat(0xfff0d8,0xe8e3d6);const dd=new THREE.Mesh(new THREE.CircleGeometry(r*.97,32),gm);dd.rotation.x=Math.PI/2;dd.position.y=1.719;g.add(dd);lampOf(g,[0,1.6,0],WARM,1.0,4,[gm]);}
+function tvWall(g,w,d,m){const h=w*.58,y0=.85;box(-w/2,w/2,y0,y0+h,-d/2,d/2-.02,m,g);box(-w/2+.015,w/2-.015,y0+.015,y0+h-.015,d/2-.02,d/2-.016,mat.screen,g);
+  box(-.15,.15,y0+h*.3,y0+h*.7,-d/2-.01,-d/2+.01,mat.black,g);}
+function tubeBox(g,x0,x1,y0,y1,z0,z1,m){return box(x0,x1,y0,y1,z0,z1,m,g);}
+function outdoorFrame(g,w,d,m,backH){const t=.012;for(const sx of[-1,1])for(const sz of[-1,1])tubeBox(g,sx*(w/2-.02)-t,sx*(w/2-.02)+t,0,.42,sz*(d/2-.02)-t,sz*(d/2-.02)+t,m);
+  for(const sz of[-1,1])tubeBox(g,-w/2,w/2,.4,.42,sz*(d/2-.02)-t,sz*(d/2-.02)+t,m);for(const sx of[-1,1])tubeBox(g,sx*(w/2-.02)-t,sx*(w/2-.02)+t,.4,.42,-d/2,d/2,m);
+  for(let x=-w/2+.06;x<w/2-.04;x+=.09)tubeBox(g,x-.02,x+.02,.4,.415,-d/2+.04,d/2-.04,m);
+  tubeBox(g,-w/2,w/2,backH-.02,backH,-d/2,-d/2+.025,m);for(const sx of[-1,1]){tubeBox(g,sx*(w/2-.02)-t,sx*(w/2-.02)+t,.42,backH,-d/2,-d/2+.025,m);tubeBox(g,sx*(w/2-.02)-t,sx*(w/2-.02)+t,.6,.625,-d/2,d/2,m);}
+  for(let x=-w/2+.1;x<w/2-.05;x+=.11)tubeBox(g,x-.006,x+.006,.42,backH,-d/2,-d/2+.02,m);
+  for(const sx of[-1,1])for(let z=-d/2+.15;z<d/2-.1;z+=.15)tubeBox(g,sx*(w/2-.02)-.006,sx*(w/2-.02)+.006,.42,.6,z,z+.012,m);}
+function outdoorTable(g,w,d,m){for(let x=-w/2;x<w/2-.01;x+=.06)tubeBox(g,x+.005,x+.05,.43,.45,-d/2,d/2,m);legs(g,w,d,.43,m,.03,.012);}
+function raisedPlanter(g,w,d,m){for(const sx of[-1,1])for(const sz of[-1,1]){const l=cyl(sx*(w/2-.1),sz*(d/2-.08),.03,0,.48,m,g);}
+  const b=new THREE.Mesh(new THREE.CylinderGeometry(.5,.42,.3,32),m);b.scale.set(w,1,d);b.position.y=.63;b.castShadow=true;g.add(b);
+  const soil=new THREE.Mesh(new THREE.CircleGeometry(.48,32),M(0x3b2f26,{roughness:1}));soil.rotation.x=-Math.PI/2;soil.scale.set(w,d,1);soil.position.y=.76;g.add(soil);
+  for(let k=0;k<12;k++){const x=(k%6-2.5)*w/7,z=(Math.floor(k/6)-.5)*d/3;cyl(x,z,.006,.76,1.0+(k%3)*.06,M(0x8a8a3a),g);}}
+function storagePile(g,w,d,m){let y=0;for(const h of[.32,.3,.28]){box(-w/2+.02,w/2-.02,y,y+h,-d/2+.02,d/2-.02,m,g);y+=h-.02;}}
+function foldedChairs(g,w,d,m){for(let k=0;k<3;k++){const b=new THREE.Mesh(new THREE.BoxGeometry(w,.85,.04),m);b.position.set(0,.42,-d/2+.05+k*.08);b.rotation.x=-.25;b.castShadow=true;g.add(b);}}
+function potPlant(g,w,d,m){const r=Math.min(w,d)/2;const pot=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.78,r*1.6,24),M(0x1f2224,{roughness:.6}));pot.position.y=r*.8;pot.castShadow=true;g.add(pot);
+  const f=new THREE.Mesh(new THREE.IcosahedronGeometry(r*1.2,1),m);f.position.y=r*1.6+r*.9;f.scale.set(1,1.5,1);f.castShadow=true;g.add(f);}
+function terraPot(g,w,d,m){const r=Math.min(w,d)/2;const pot=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.75,r*1.4,24),M(0xc0663f,{roughness:.8}));pot.position.y=r*.7;pot.castShadow=true;g.add(pot);
+  const f=new THREE.Mesh(new THREE.IcosahedronGeometry(r*1.05,1),m);f.position.y=r*1.4+r*.6;f.castShadow=true;g.add(f);}
 const CAT={
+  outdoorSofa:{name:'Utesoffa, svart metall',w:1.6,d:.72,m:M(0x2c2f33,{roughness:.5}),b:(g,w,d,m)=>outdoorFrame(g,w,d,m,.82)},
+  outdoorChair:{name:'Utefåtölj, svart metall',w:.72,d:.72,m:M(0x2c2f33,{roughness:.5}),b:(g,w,d,m)=>outdoorFrame(g,w,d,m,.82)},
+  outdoorTable:{name:'Utebord, svart metall',w:1.0,d:.45,m:M(0x2c2f33,{roughness:.5}),b:outdoorTable},
+  raisedPlanter:{name:'Odlingslåda på ben',w:.85,d:.4,m:M(0x3a3d40,{roughness:.6}),b:raisedPlanter},
+  storagePile:{name:'Förvaring under presenning',w:.6,d:.5,m:M(0x161718,{roughness:.3}),b:storagePile},
+  foldedChairs:{name:'Hopfällda trästolar',w:.45,d:.3,m:M(0xb9b4aa,{roughness:.9}),b:foldedChairs},
+  potPlant:{name:'Kruka med växt, svart',w:.36,d:.36,m:M(0x7e9a3c,{roughness:.9}),b:potPlant},
+  terraPot:{name:'Terrakottakruka',w:.3,d:.3,m:M(0x4f7a4a,{roughness:.9}),b:terraPot},
+  tvWall:{name:'TV på vägg',w:1.0,d:.08,m:mat.frame,b:tvWall},
   bumling:{name:'Taklampa Bumling',w:.4,d:.4,m:M(0xd9ccad,{roughness:.35}),b:bumling},
   flowerpot:{name:'Bordslampa Flowerpot',w:.23,d:.23,m:M(0xc9c3b6,{roughness:.35}),b:flowerpotLamp},
   pleatLamp:{name:'Bordslampa veckad papper',w:.34,d:.34,m:mat.white,b:pleatLamp},
@@ -792,7 +821,7 @@ const $=id=>document.getElementById(id);
 const itemsMap=new Map();
 let moveMode=false,lastMove=null,sel=null,dragging=null,downAt=null,canEdit=true,db=null,layoutId=null,layouts=[],unsubItems=null,lastDel=null,nudgeT=null,delArm=null;
 const snap=v=>Math.round(v/0.05)*0.05, r3=v=>Math.round(v*1000)/1000;
-const clampX=v=>Math.min(10.1,Math.max(-0.95,v)), clampZ=v=>Math.min(10.25,Math.max(-0.3,v));
+const clampX=v=>Math.min(10.1,Math.max(-1.35,v)), clampZ=v=>Math.min(10.25,Math.max(-0.3,v));
 const fm=v=>v.toFixed(2).replace('.',',');
 const normRot=r=>{r=((r%360)+360)%360;return r>180?r-360:r;};
 const selBox=new THREE.BoxHelper(undefined,0xe0a030); selBox.visible=false; scene.add(selBox);
