@@ -304,7 +304,7 @@ function opening(axis,o,t0,t1,y0,y1){
     // leaf on a pivot at the hinge
     const piv=new THREE.Group();
     if(axis==='x') piv.position.set(hx,0,face); else piv.position.set(face,0,hx);
-    walls.add(piv);
+    piv.userData.isDoorPivot=true;walls.add(piv);
     const lw=w-0.02, th=0.04, lm=o.type==='glassdoor'?mat.glass:mat.leaf;
     const leaf=new THREE.Mesh(new THREE.BoxGeometry(lw,y1-0.01,th),lm);
     leaf.castShadow=o.type!=='glassdoor'; leaf.position.set(dir*lw/2,(y1-0.01)/2,o.side*th/2);
@@ -330,12 +330,12 @@ wallRun('z',0.59,3.78,7.55,7.8);                                          // hal
 wallRun('x',7.55,10.13,3.53,3.78);                                        // bedroom 2 / lift shaft
 wallRun('z',3.53,10.27,9.78,10.13,[{a:4.95,b:6.35,type:'win',y0:.8,y1:2.15,mull:1},{a:7.7,b:9.15,type:'win',y0:.8,y1:2.15,mull:1}]);
 wallRun('x',1.26,10.13,10.02,10.27);                                      // party wall (south)
-wallRun('z',5.16,10.02,1.26,1.56,[{a:5.49,b:6.34,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:55},{a:6.45,b:8.6,type:'win',y0:.45,y1:2.15,mull:1}]);
+wallRun('z',5.16,10.02,1.26,1.56,[{a:5.49,b:6.34,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:88},{a:6.45,b:8.6,type:'win',y0:.45,y1:2.15,mull:1}]);
 wallRun('x',-0.3,1.26,5.16,5.46);                                        // kitchen south (exterior, toward balcony)
 wallRun('x',1.56,2.64,5.16,5.26,[{a:1.66,b:2.56,type:'open',y1:2.1}]); // kitchen – living room: sliding pocket door (open)
 wallRun('x',2.64,3.88,5.16,5.26);                                        // closed wall behind the colour-block cabinet (photo)
 wallRun('z',2.0,2.66,3.88,3.98);                                          // stub kitchen / smyg (IKEA plan)
-wallRun('z',-0.25,5.46,-0.3,0,[{a:1.0,b:1.85,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:30},{a:2.63,b:3.5,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:30},{a:4.5,b:5.12,type:'win',y0:.85,y1:2.2}]);
+wallRun('z',-0.25,5.46,-0.3,0,[{a:1.0,b:1.85,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:88},{a:2.63,b:3.5,type:'glassdoor',y1:2.1,hinge:'a',side:-1,open:88},{a:4.5,b:5.12,type:'win',y0:.85,y1:2.2}]);
 wallRun('x',0,5.06,1.9,2.0,[{a:4.13,b:4.91,type:'door',hinge:'b',side:1,open:85}]); // bath/WC – kitchen
 wallRun('z',0,1.9,3.115,3.23,[{a:.7,b:1.5,type:'open'}]);                 // bath – WC (sliding door)
 box(3.085,3.115,0,2.05,1.45,2.0,mat.leaf,walls);                    // slid-open door panel
@@ -992,8 +992,11 @@ $('kNow').onclick=()=>applyKitchen('now');$('kPlan').onclick=()=>applyKitchen('p
 // ---------- walk mode: first-person view at a person's eye height ----------
 const walk={on:false,yaw:0,pitch:0,keys:{},eye:1.66,joy:null,look:null,boxes:[],acc:0,last:0};
 const eyeFor=cm=>Math.round(Math.min(220,Math.max(100,cm||179))*0.93)/100;   // eyes ≈ 7 % below the top of the head
-function collectBoxes(){const out=[],b=new THREE.Box3();
-  const add=o=>{if(o.material===mat.poche||o.isLight)return;b.setFromObject(o);if(b.isEmpty())return;if(b.min.y<0.5&&b.max.y>0.3)out.push([b.min.x,b.max.x,b.min.z,b.max.z]);};
+function collectBoxes(){const out=[],b=new THREE.Box3(),pt=new THREE.Vector3();
+  // door leaves: sample along the leaf so a half-open door doesn't block its whole bounding box
+  for(const D of doors){const leaf=D.lg.children[0];if(!leaf||!leaf.geometry)continue;leaf.updateWorldMatrix(true,false);const hw=leaf.geometry.parameters.width/2;
+    for(let k=0;k<=6;k++){pt.set(-hw+2*hw*k/6,0,0).applyMatrix4(leaf.matrixWorld);out.push([pt.x-.03,pt.x+.03,pt.z-.03,pt.z+.03]);}}
+  const add=o=>{if(o.material===mat.poche||o.isLight||o.userData.isDoorPivot)return;b.setFromObject(o);if(b.isEmpty())return;if(b.min.y<0.5&&b.max.y>0.3)out.push([b.min.x,b.max.x,b.min.z,b.max.z]);};
   walls.children.forEach(add);fixed.children.forEach(add);ctx.children.forEach(add);if(furn.visible)furn.children.forEach(add);walk.boxes=out;}
 function blocked(x,z){const r=.2;for(const q of walk.boxes)if(x>q[0]-r&&x<q[1]+r&&z>q[2]-r&&z<q[3]+r)return true;return false;}
 function walkStep(dt){const k=walk.keys;walk.acc+=dt;if(walk.acc>1){walk.acc=0;collectBoxes();}
