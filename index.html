@@ -28,9 +28,36 @@ body{margin:0;font-size:14px}
   --accent:#6fb3b6; --accent-ink:#0e1515; --chip:#253030; --scene:#1a2121; --label-bg:rgba(20,27,27,.86); --danger:#e08a78; color-scheme:dark}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;overflow:hidden}
-.app{height:100%;display:grid;grid-template-columns:330px 1fr}
-.panel{background:var(--panel);border-right:1px solid var(--line);overflow:auto;
-  padding-block:22px 18px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:20px;
+.app{height:100%;display:grid;grid-template-columns:340px 1fr;grid-template-rows:auto 1fr;grid-template-areas:"top top" "panel view"}
+.topbar{grid-area:top;display:flex;align-items:center;gap:10px;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:var(--panel);border-bottom:1px solid var(--line);min-width:0}
+.brand{display:flex;flex-direction:column;line-height:1.1;margin-right:auto;min-width:0}
+.brand .t{font-family:var(--display);font-weight:600;font-size:22px;letter-spacing:.01em;white-space:nowrap}
+.brand .sub{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar .seg{width:auto}.topbar .seg button{padding:7px 14px}
+.btn.tb{padding:7px 12px}.btn.icon{display:inline-grid;place-items:center;padding:7px 9px}
+.brand .short{display:none}@media (max-width:760px){.brand .short{display:inline}}
+.btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:2;margin:0 -20px;padding:0 12px}
+.tabs [role=tab]{all:unset;cursor:pointer;padding:12px 10px 10px;font-weight:500;font-size:14px;color:var(--muted);border-bottom:2px solid transparent}
+.tabs [role=tab][aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.tabs [role=tab]:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.sheet-toggle{all:unset;display:none;margin-left:auto}
+.pane{display:flex;flex-direction:column;gap:20px}
+.switch{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;cursor:pointer;padding:10px;border:1px solid var(--line);border-radius:8px}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.sw-track{width:38px;height:22px;border-radius:11px;background:var(--line);position:relative;transition:background .15s;margin-top:2px}
+.sw-track::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.switch input:checked+.sw-track{background:var(--accent)}.switch input:checked+.sw-track::after{transform:translateX(16px)}
+.switch input:focus-visible+.sw-track{outline:2px solid var(--accent);outline-offset:2px}
+.inspector{position:absolute;top:12px;right:max(12px,env(safe-area-inset-right,0px));width:280px;max-width:calc(100% - 24px);z-index:5;box-shadow:0 6px 24px rgba(0,0,0,.18);background:var(--panel)!important}
+.inspector .row strong{font-size:16px}
+.sunbar{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:4;display:flex;align-items:center;gap:10px;background:var(--label-bg);
+  border:1px solid var(--line);border-radius:10px;padding:6px 8px 6px 12px;width:min(560px,calc(100% - 90px));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.sunbar input[type=range]{flex:1;min-width:0}.sunbar svg{color:#d99a1e;flex:none}.sunbar .num{min-width:42px}
+.walkui:not([hidden])~.sunbar{display:none}
+.panel{grid-area:panel;background:var(--panel);border-right:1px solid var(--line);overflow:auto;min-height:0;
+  padding-block:0 18px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:20px;
   display:flex;flex-direction:column;gap:20px}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 h1{font-family:var(--display);font-weight:600;font-size:40px;line-height:1;margin:6px 0 0;text-wrap:balance}
@@ -59,7 +86,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .toggles{display:flex;gap:18px;flex-wrap:wrap}
 .note{font-size:12.5px;line-height:1.45;color:var(--muted);margin:0;max-width:60ch}
 .hint{font-size:12.5px;color:var(--muted);margin:0}
-.view{position:relative;min-width:0;min-height:0;background:var(--scene)}
+.view{grid-area:view;position:relative;min-width:0;min-height:0;background:var(--scene)}
 .view canvas{display:block;width:100%;height:100%;touch-action:none}
 .labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .lbl{position:absolute;transform:translate(-50%,-50%);background:var(--label-bg);border:1px solid var(--line);
@@ -69,7 +96,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .lbl.ctx .n{font-weight:500;color:var(--muted)}
 .sunrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
 .sunrow input[type=date]{font:inherit;font-size:13px;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
-.compass{position:absolute;right:max(14px,env(safe-area-inset-right,0px));bottom:14px;width:46px;height:46px;border-radius:50%;background:var(--label-bg);border:1px solid var(--line);pointer-events:none}
+.compass{position:absolute;right:max(14px,env(safe-area-inset-right,0px));bottom:64px;width:46px;height:46px;border-radius:50%;background:var(--label-bg);border:1px solid var(--line);pointer-events:none}
 .compass svg{width:100%;height:100%}
 .north{position:absolute;right:max(14px,env(safe-area-inset-right,0px));top:14px;font-family:var(--mono);font-size:11px;color:var(--muted);
   background:var(--label-bg);border:1px solid var(--line);border-radius:4px;padding:4px 8px}
@@ -93,7 +120,7 @@ input[type=number]{font-family:var(--mono);font-size:13px;width:100%}
 input[type=color]{width:38px;height:33px;padding:2px;border:1px solid var(--line);border-radius:6px;background:var(--panel);cursor:pointer}
 .status{font-size:12.5px;color:var(--muted);min-height:1em}.status.err{color:var(--danger)}
 textarea{box-sizing:border-box;width:100%;font-family:var(--mono);font-size:12px;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px;resize:vertical}
-.ro .edit-only{display:none!important}
+body.ro .edit-only{display:none!important}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .walkui{position:absolute;inset:0;pointer-events:none}
 .walkbar{position:absolute;top:12px;left:50%;transform:translateX(-50%);pointer-events:auto;background:var(--label-bg);border:1px solid var(--line);border-radius:8px;
@@ -107,11 +134,18 @@ textarea{box-sizing:border-box;width:100%;font-family:var(--mono);font-size:12px
 @media (hover:none),(pointer:coarse){.walk-desk{display:none}.walk-touch{display:inline}}
 .loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-family:var(--mono);font-size:13px}
 @media (max-width:760px){
-  .app{grid-template-columns:1fr;grid-template-rows:1fr auto}
-  .view{order:1}
-  .panel{order:2;max-height:44vh;border-right:0;border-top:1px solid var(--line);
-    padding-block:14px 14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));gap:16px}
-  h1{font-size:30px}
+  .app{grid-template-columns:1fr;grid-template-rows:auto 1fr auto;grid-template-areas:"top" "view" "panel"}
+  .brand .sub{display:none}.brand .t{font-size:17px}.brand .long{display:none}
+  .topbar{gap:6px}.topbar .seg button{padding:7px 9px;font-size:13px}.btn.tb{padding:7px 9px;font-size:13px}
+  .panel{max-height:46vh;border-right:0;border-top:1px solid var(--line);
+    padding-block:0 14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));gap:16px}
+  .panel.collapsed{max-height:none;overflow:hidden;padding-bottom:0}.panel.collapsed .pane{display:none}
+  .tabs{margin:0 -16px;padding:0 8px}.tabs [role=tab]{padding:11px 8px 9px;font-size:13px}
+  .sheet-toggle{display:inline-grid;place-items:center;padding:0 8px;cursor:pointer;color:var(--muted)}
+  .panel.collapsed .sheet-toggle svg{transform:rotate(180deg)}
+  .inspector{top:8px;left:8px;right:8px;width:auto}
+  .sunbar{bottom:8px;width:calc(100% - 76px);left:8px;transform:none}
+  .compass{bottom:10px}
   .lbl .a{display:none}
   .lbl .n{font-size:12px}
 }
@@ -119,82 +153,109 @@ textarea{box-sizing:border-box;width:100%;font-family:var(--mono);font-size:12px
 </head>
 <body>
 <div class="app">
-  <aside class="panel" aria-label="Kontroller">
-    <header>
-      <div class="eyebrow">Planritning → 3D · LGH 35</div>
-      <h1>Lägenhet 35</h1>
-      <div class="stats"><span><b>79,4</b> m² BOA</span><span><b>3</b> rok</span><span><b>+15</b> m² balkong</span></div>
-    </header>
+  <header class="topbar">
+    <div class="brand"><span class="t"><span class="long">Lägenhet </span><span class="short">Lgh </span>35</span><span class="sub">79,4 m² · 3 rok · +15 m² balkong</span></div>
+    <div class="seg" role="group" aria-label="Vy">
+      <button id="v3d" aria-pressed="true" title="3D-vy">3D</button>
+      <button id="vplan" aria-pressed="false" title="Ovanifrån">Plan</button>
+      <button id="vrot" aria-pressed="false" title="Snurra runt">Snurra</button>
+    </div>
+    <button id="walkBtn" class="btn tb" type="button" aria-pressed="false" title="Gå runt i lägenheten">Gå runt</button>
+    <button id="resetCam" class="btn tb icon" type="button" title="Återställ kameran" aria-label="Återställ kameran"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </header>
 
-    <section class="ctrl" aria-label="Visning">
+  <aside class="panel" id="panel" aria-label="Kontroller">
+    <nav class="tabs" role="tablist" aria-label="Sektioner">
+      <button role="tab" id="tab-ov" aria-controls="pane-ov" aria-selected="true" data-tab="ov">Översikt</button>
+      <button role="tab" id="tab-fu" aria-controls="pane-fu" aria-selected="false" data-tab="fu">Möblering</button>
+      <button role="tab" id="tab-li" aria-controls="pane-li" aria-selected="false" data-tab="li">Ljus</button>
+      <button role="tab" id="tab-se" aria-controls="pane-se" aria-selected="false" data-tab="se">Inställn.</button>
+      <button class="sheet-toggle" id="sheetToggle" type="button" aria-label="Fäll ihop panelen" title="Fäll ihop"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </nav>
+
+    <div class="pane" id="pane-ov" role="tabpanel" aria-labelledby="tab-ov">
       <div class="seg kseg" role="group" aria-label="Kök"><button id="kNow" aria-pressed="true">Kök idag</button><button id="kPlan" aria-pressed="false">Kök planerat</button></div>
-      <div class="seg" role="group" aria-label="Vy">
-        <button id="v3d" aria-pressed="true">3D</button>
-        <button id="vplan" aria-pressed="false">Ovanifrån</button>
-        <button id="vrot" aria-pressed="false">Snurra</button>
+      <section>
+        <h2 class="sec-title">Rum – klicka för att gå in</h2>
+        <ul class="rooms" id="rooms"></ul>
+      </section>
+      <p class="hint">Klicka på en dörr eller lampa för att öppna/stänga eller tända/släcka. Dra för att rotera, scrolla/nypa för att zooma, högerklick eller två fingrar för att flytta vyn.</p>
+    </div>
+
+    <div class="pane" id="pane-fu" role="tabpanel" aria-labelledby="tab-fu" hidden>
+    <section class="furn-ui" id="furnSec" aria-label="Möblering">
+      <div class="row2"><button id="loginBtn" class="btn primary" type="button" hidden>Logga in med Google</button><span id="who" class="hint" hidden>Inloggad som <span id="whoName"></span> · <button id="logoutBtn" class="btn link" type="button">Logga ut</button></span></div>
+      <p class="hint" id="fOff">Ansluter…</p>
+      <div class="furn-ui" id="fOn" hidden>
+        <button id="seedBtn" class="btn primary" type="button" hidden style="align-self:flex-start">Lägg in startmöbleringen</button>
+        <div><h2 class="sec-title">Variant</h2>
+        <div class="row2"><label for="layoutSel" class="sr">Variant</label><select id="layoutSel"></select><button id="newLayoutBtn" class="btn edit-only" type="button">Ny</button></div></div>
+        <form id="newLayoutForm" class="row2" hidden><label for="newLayoutName" class="sr">Namn på variant</label><input id="newLayoutName" type="text" placeholder="t.ex. Nytt vardagsrum" maxlength="40" required><button class="btn primary">Skapa</button><button type="button" id="newLayoutCancel" class="btn">Avbryt</button></form>
+        <label class="switch edit-only"><input id="tMove" type="checkbox"><span class="sw-track" aria-hidden="true"></span><span><b>Flytta möbler</b><br><span class="hint">Av: möblerna ligger låsta medan du tittar runt</span></span></label>
+        <div class="edit-only"><h2 class="sec-title">Lägg till möbel</h2>
+        <div class="row2"><label for="addType" class="sr">Möbeltyp</label><select id="addType"></select><button id="addBtn" class="btn primary" type="button">Lägg till</button></div></div>
+        <p class="hint" id="fHint">Klicka på en möbel för att se den. Slå på Flytta möbler för att ändra.</p>
+        <div class="row"><span class="status" id="fStatus" role="status"></span><button id="undoBtn" class="btn link" type="button" hidden>Ångra</button></div>
+        <div class="btnrow"><button id="importBtn" class="btn edit-only" type="button">Importera…</button><button id="exportBtn" class="btn" type="button">Exportera…</button></div>
+        <form id="importForm" class="furn-ui" hidden><label for="importText" class="hint" id="importLbl">Klistra in möbleringen du fått (JSON). Den uppdaterar varianten som är vald nu.</label>
+          <textarea id="importText" rows="6" spellcheck="false" placeholder='{"items":{ … }}'></textarea>
+          <div class="row2"><button class="btn primary" id="importGo">Importera</button><button type="button" id="copyExport" class="btn" hidden>Kopiera</button><button type="button" id="importCancel" class="btn">Stäng</button></div></form>
+        <button id="delLayoutBtn" class="btn link danger edit-only" type="button" style="align-self:flex-start">Ta bort den här varianten</button>
       </div>
+    </section>
+    </div>
+
+    <div class="pane" id="pane-li" role="tabpanel" aria-labelledby="tab-li" hidden>
+      <section>
+        <h2 class="sec-title">Solen</h2>
+        <div class="sunrow"><input id="sunD" type="date" aria-label="Datum"><span></span></div>
+        <p class="hint" id="sunInfo" style="margin:6px 0 0"></p>
+        <p class="hint">Tiden ändrar du i reglaget längst ner i 3D-vyn.</p>
+      </section>
+      <section>
+        <h2 class="sec-title">Lampor</h2>
+        <div class="btnrow"><button id="lampsOn" class="btn" type="button">Tänd alla</button><button id="lampsOff" class="btn" type="button">Släck alla</button></div>
+        <label class="tog" style="margin-top:12px"><input id="tEve" type="checkbox"> Tvinga kväll (oavsett tid)</label>
+        <p class="hint">Lamporna lyser i rummet när solen har gått ner. Klicka på en lampa i 3D-vyn för att tända eller släcka just den.</p>
+      </section>
+    </div>
+
+    <div class="pane" id="pane-se" role="tabpanel" aria-labelledby="tab-se" hidden>
       <div>
         <div class="row"><label for="wallh" class="sec-title" style="margin:0">Vägghöjd</label><span class="num" id="wallhv">2,70 m</span></div>
         <input id="wallh" type="range" min="0.3" max="2.7" step="0.05" value="2.7">
       </div>
-      <div class="row2"><button id="walkBtn" class="btn" type="button" aria-pressed="false">Gå runt i lägenheten</button>
-        <label for="walkH" class="hint">Längd</label><input id="walkH" type="number" min="100" max="220" step="1" value="179" style="width:72px"><span class="hint">cm</span></div>
-      <div>
-        <div class="row"><label for="sunT" class="sec-title" style="margin:0">Sol över dygnet</label><span class="num" id="sunV">13:00</span></div>
-        <input id="sunT" type="range" min="0" max="24" step="0.25" value="13">
-        <div class="sunrow"><input id="sunD" type="date" aria-label="Datum"><span></span><button id="sunPlay" class="btn" type="button">Spela dag</button></div>
-        <p class="hint" id="sunInfo" style="margin:6px 0 0"></p>
-      </div>
       <div class="toggles">
-        <label class="tog"><input id="tFurn" type="checkbox" checked> Möbler</label>
+        <label class="tog"><input id="tFurn" type="checkbox" checked> Visa möbler</label>
         <label class="tog"><input id="tLbl" type="checkbox" checked> Rumsnamn</label>
-        <label class="tog"><input id="tEve" type="checkbox"> Tvinga kväll</label>
       </div>
-    </section>
-
-    <section class="furn-ui" id="furnSec" aria-label="Möblering">
-      <h2 class="sec-title" style="margin:0">Möblering · delad</h2>
-      <div class="row2"><button id="loginBtn" class="btn primary" type="button" hidden>Logga in med Google</button><span id="who" class="hint" hidden>Inloggad som <span id="whoName"></span> · <button id="logoutBtn" class="btn link" type="button">Logga ut</button></span></div>
-      <p class="hint" id="fOff">Ansluter…</p>
-      <div class="furn-ui" id="fOn" hidden>
-        <label class="tog edit-only"><input id="tMove" type="checkbox"> Flytta möbler</label>
-        <button id="seedBtn" class="btn primary" type="button" hidden style="align-self:flex-start">Lägg in startmöbleringen</button>
-        <div class="row2"><label for="layoutSel" class="sr">Variant</label><select id="layoutSel"></select><button id="newLayoutBtn" class="btn edit-only" type="button">Ny variant</button></div>
-        <form id="newLayoutForm" class="row2" hidden><label for="newLayoutName" class="sr">Namn på variant</label><input id="newLayoutName" type="text" placeholder="t.ex. Nytt vardagsrum" maxlength="40" required><button class="btn primary">Skapa</button><button type="button" id="newLayoutCancel" class="btn">Avbryt</button></form>
-        <div class="row2 edit-only"><label for="addType" class="sr">Möbeltyp</label><select id="addType"></select><button id="addBtn" class="btn primary" type="button">Lägg till</button></div>
-        <div id="selCard" class="selcard" hidden>
-          <div class="row"><strong id="selName"></strong><span class="num" id="selPos"></span></div>
-          <div class="grid2 edit-only"><label>Bredd (mm)<input id="selW" type="number" step="10" min="100" max="6000"></label><label>Djup (mm)<input id="selD" type="number" step="10" min="100" max="6000"></label></div>
-          <div class="btnrow edit-only">
-            <button id="rotL" class="btn" type="button" aria-label="Vrid 15 grader">↺ 15°</button>
-            <button id="rotR" class="btn" type="button" aria-label="Vrid 90 grader">↻ 90°</button>
-            <input id="selColor" type="color" aria-label="Färg">
-            <button id="dupBtn" class="btn" type="button">Kopiera</button>
-            <button id="delBtn" class="btn danger" type="button">Ta bort</button>
-          </div>
-        </div>
-        <p class="hint" id="fHint">Rotera och zooma fritt – möblerna ligger still. Klicka på en möbel för att se den. Slå på Flytta möbler för att ändra.</p>
-        <button id="importBtn" class="btn link edit-only" type="button" style="align-self:flex-start">Importera möbler…</button>
-        <form id="importForm" class="furn-ui" hidden><label for="importText" class="hint">Klistra in möbleringen du fått (JSON). Den uppdaterar varianten som är vald nu.</label>
-          <textarea id="importText" rows="6" spellcheck="false" placeholder='{"items":{ … }}'></textarea>
-          <div class="row2"><button class="btn primary">Importera</button><button type="button" id="importCancel" class="btn">Avbryt</button></div></form>
-        <div class="row"><span class="status" id="fStatus" role="status"></span><button id="undoBtn" class="btn link" type="button" hidden>Ångra</button></div>
-        <button id="delLayoutBtn" class="btn link danger edit-only" type="button" style="align-self:flex-start">Ta bort den här varianten</button>
-      </div>
-    </section>
-
-    <section>
-      <h2 class="sec-title">Rum – klicka för att gå in</h2>
-      <ul class="rooms" id="rooms"></ul>
-      <p class="hint" style="margin-top:8px">Klicka på en dörr eller lampa för att öppna/stänga eller tända/släcka. Slå på Kväll för att se lamporna. Dra för att rotera, scrolla/nypa för att zooma, högerklick eller två fingrar för att flytta.</p>
-    </section>
-
-    <p class="note">Geometrin är uppmätt från planritningen, skalad så att bostadsytan blir 79,4 m² och kontrollerad mot robotdammsugarens karta (proportionerna stämmer inom några procent). Köket följer den uppmätta IKEA-ritningen (3160 × 3880 mm). Rumsnamnen följer robotens karta. Räkna med ±10 cm på enskilda mått. Rumsytor är ungefärliga golvytor, takhöjd 2,70 m (uppmätt i köket). Möbleringen sparas i Firebase och delas mellan de konton som finns i Firestore-reglerna.</p>
+      <div class="row2"><label for="walkH" class="hint">Din längd i gå runt-läget</label><input id="walkH" type="number" min="100" max="220" step="1" value="179" style="width:76px"><span class="hint">cm</span></div>
+      <p class="note">Geometrin är uppmätt från planritningen, skalad så att bostadsytan blir 79,4 m² och kontrollerad mot robotdammsugarens karta. Köket följer den uppmätta IKEA-ritningen (3160 × 3880 mm). Räkna med ±10 cm på enskilda mått. Takhöjd 2,70 m. Möbleringen sparas i Firebase och delas mellan de konton som finns i Firestore-reglerna. Dörrar och lampor sparas bara i den här webbläsaren.</p>
+    </div>
   </aside>
 
   <main class="view" id="view">
     <div class="loading" id="loading">Laddar 3D-modell…</div>
     <div class="labels" id="labels"></div>
+    <div id="selCard" class="selcard inspector" hidden>
+      <div class="row"><strong id="selName"></strong><button id="selClose" class="btn link" type="button" aria-label="Stäng">✕</button></div>
+      <span class="num" id="selPos"></span>
+      <div class="grid2 edit-only"><label>Bredd (mm)<input id="selW" type="number" step="10" min="100" max="6000"></label><label>Djup (mm)<input id="selD" type="number" step="10" min="100" max="6000"></label></div>
+      <div class="btnrow edit-only">
+        <button id="rotL" class="btn" type="button" aria-label="Vrid 15 grader">↺ 15°</button>
+        <button id="rotR" class="btn" type="button" aria-label="Vrid 90 grader">↻ 90°</button>
+        <input id="selColor" type="color" aria-label="Färg">
+        <button id="dupBtn" class="btn" type="button">Kopiera</button>
+        <button id="delBtn" class="btn danger" type="button">Ta bort</button>
+      </div>
+      <p class="hint edit-only" id="selHint">Slå på Flytta möbler för att dra möbeln.</p>
+    </div>
+    <div class="sunbar" id="sunbar">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></svg>
+      <label for="sunT" class="sr">Tid på dygnet</label><input id="sunT" type="range" min="0" max="24" step="0.25" value="13">
+      <span class="num" id="sunV">13:00</span>
+      <button id="sunPlay" class="btn" type="button">Spela dag</button>
+    </div>
     <div class="compass" aria-hidden="true"><svg viewBox="-23 -23 46 46"><g id="compassRot"><path d="M0,-17 L5,0 L0,-3 L-5,0Z" fill="#c0392b"/><path d="M0,17 L5,0 L0,3 L-5,0Z" fill="#8a9593"/><text x="0" y="-8" font-size="0" fill="none">N</text></g></svg></div>
     <div class="walkui" id="walkUI" hidden>
       <div class="cross"></div>
@@ -210,6 +271,7 @@ textarea{box-sizing:border-box;width:100%;font-family:var(--mono);font-size:12px
 <script src="firebase-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/utils/BufferGeometryUtils.js"></script>
 <script>
 (function(){
 if(!window.THREE){document.getElementById('loading').textContent='Kunde inte ladda 3D-biblioteket.';return;}
@@ -219,7 +281,7 @@ const H=2.7, CX=4.6, CZ=4.9;
 // ---------- renderer / scene ----------
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate=false;
 renderer.localClippingEnabled=true;
 renderer.outputEncoding=THREE.sRGBEncoding;
 view.prepend(renderer.domElement);
@@ -264,15 +326,30 @@ const mat={
   teak:M(0xa5642c,{roughness:.55}), laminate:M(0xdddcd5,{roughness:.6}), mint:M(0x9fcfca,{roughness:.5}), sheep:M(0x5f5a55,{roughness:1})
 };
 
+// ---------- performance: one shared unit box, scaled per mesh; shared cylinders; static merging ----------
+const UNIT_BOX=new THREE.BoxGeometry(1,1,1),CYL_CACHE=new Map();let shadowDirty=true;const markShadow=()=>{shadowDirty=true;};
 function box(x0,x1,y0,y1,z0,z1,m,parent=fixed,cast=true){
-  const g=new THREE.BoxGeometry(Math.abs(x1-x0),Math.abs(y1-y0),Math.abs(z1-z0));
-  const me=new THREE.Mesh(g,m); me.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);
+  const me=new THREE.Mesh(UNIT_BOX,m); me.scale.set(Math.max(1e-4,Math.abs(x1-x0)),Math.max(1e-4,Math.abs(y1-y0)),Math.max(1e-4,Math.abs(z1-z0)));me.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);
   me.castShadow=cast; me.receiveShadow=true; parent.add(me); return me;}
-function cyl(x,z,r,y0,y1,m,parent=fixed,seg=24){const me=new THREE.Mesh(new THREE.CylinderGeometry(r,r,y1-y0,seg),m);
+function cyl(x,z,r,y0,y1,m,parent=fixed,seg=24){const ck=r.toFixed(4)+'|'+(y1-y0).toFixed(4)+'|'+seg;let cg=CYL_CACHE.get(ck);if(!cg){cg=new THREE.CylinderGeometry(r,r,y1-y0,seg);CYL_CACHE.set(ck,cg);}const me=new THREE.Mesh(cg,m);
   me.position.set(x,(y0+y1)/2,z); me.castShadow=true; me.receiveShadow=true; parent.add(me); return me;}
+function mergeMeshes(root,meshes){ // meshes: descendants of root; root's own transform is ignored
+  const buckets=new Map(),inv=new THREE.Matrix4().copy(root.matrixWorld).invert(),mtx=new THREE.Matrix4();
+  for(const o of meshes){const k=o.material.uuid+'|'+(o.castShadow?1:0)+(o.receiveShadow?1:0);let b=buckets.get(k);if(!b)buckets.set(k,b={mat:o.material,cast:o.castShadow,recv:o.receiveShadow,geos:[]});
+    mtx.multiplyMatrices(inv,o.matrixWorld);let g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();g.applyMatrix4(mtx);
+    for(const n of Object.keys(g.attributes))if(!['position','normal','uv'].includes(n))g.deleteAttribute(n);if(!g.attributes.uv)g.setAttribute('uv',new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count*2),2));
+    g.clearGroups();b.geos.push(g);o.parent.remove(o);}
+  for(const b of buckets.values()){const mg=THREE.BufferGeometryUtils.mergeBufferGeometries(b.geos,false);for(const g of b.geos)g.dispose();if(!mg)continue;
+    const me=new THREE.Mesh(mg,b.mat);me.castShadow=b.cast;me.receiveShadow=b.recv;me.userData.merged=true;root.add(me);}}
+function mergeable(o){return o.isMesh&&!o.userData.noMerge&&o.userData.doorIdx===undefined&&o.userData.lampKey===undefined&&!(o.material.transparent);}
+let STATIC_BOXES=[];
+function freezeStatic(){const b=new THREE.Box3();STATIC_BOXES=[];scene.updateMatrixWorld(true);
+  const add=o=>{if(o.material===mat.poche||o.isLight||o.userData.isDoorPivot)return;b.setFromObject(o);if(b.isEmpty())return;if(b.min.y<0.5&&b.max.y>0.3)STATIC_BOXES.push([b.min.x,b.max.x,b.min.z,b.max.z]);};
+  walls.children.forEach(add);fixed.children.forEach(add);ctx.children.forEach(add);
+  for(const grp of[walls,fixed,ctx])mergeMeshes(grp,grp.children.filter(mergeable));markShadow();}
 function wallBox(x0,x1,y0,y1,z0,z1){
   const m=box(x0,x1,y0,y1,z0,z1,mat.wall,walls);
-  const b=new THREE.Mesh(m.geometry,mat.poche); b.position.copy(m.position); walls.add(b);}
+  const b=new THREE.Mesh(m.geometry,mat.poche); b.position.copy(m.position); b.scale.copy(m.scale); walls.add(b);}
 
 // ---------- walls with openings ----------
 // axis 'x': wall runs along x (from→to), thickness spans z t0..t1. axis 'z': runs along z, thickness spans x t0..t1.
@@ -380,9 +457,9 @@ const ctxLabels=[{name:'Trapphus',p:[6.7,-0.8]},{name:'Hisschakt',p:[9.0,1.5]}];
 // ---------- lamps: click a lamp to switch it on/off (remembered per browser) ----------
 const lamps=new Map();let EVE=false,DARK=false;
 function glowMat(col,base){return new THREE.MeshStandardMaterial({color:base??col,emissive:col,emissiveIntensity:0,roughness:.55,clippingPlanes:C,side:THREE.DoubleSide});}
-function setLamp(L,on){L.on=on;L.light.visible=on&&DARK;if(L.extra)for(const l of L.extra)l.visible=on&&DARK;for(const m of L.mats)m.emissiveIntensity=on?L.glow:0;}
+function setLamp(L,on){L.on=on;const v=DARK;L.light.visible=v;L.light.intensity=on?L.int0:0;if(L.extra)for(const l of L.extra){l.visible=v;l.intensity=on?l.userData.int0:0;}for(const m of L.mats)m.emissiveIntensity=on?L.glow:0;}
 function regLamp(key,parent,pos,col,int,dist,mats,glow=1){col=new THREE.Color(col).lerp(new THREE.Color(0xffffff),.55);const light=new THREE.PointLight(col,int*.7,dist,2);light.position.set(pos[0],pos[1],pos[2]);parent.add(light);
-  const L={key,light,mats,glow,on:true};lamps.set(key,L);parent.userData.lampKey=key;parent.traverse(o=>{if(o.isMesh&&mats.includes(o.material))o.userData.lampKey=key;});
+  const L={key,light,mats,glow,on:true,int0:light.intensity};lamps.set(key,L);parent.userData.lampKey=key;parent.traverse(o=>{if(o.isMesh&&mats.includes(o.material))o.userData.lampKey=key;});
   let on=true;try{const v=localStorage.getItem('lgh35-lamp-'+key);if(v!==null)on=v==='1';}catch(e){}setLamp(L,on);return L;}
 function tagLamp(key,...meshes){for(const m of meshes)m.userData.lampKey=key;}
 const WARM=0xffd6a0;
@@ -419,10 +496,10 @@ const tileTex=(()=>{const c=document.createElement('canvas');c.width=c.height=25
   x.strokeStyle='#c9cac6';x.lineWidth=3;for(let i=0;i<=256;i+=32){x.beginPath();x.moveTo(i,0);x.lineTo(i,256);x.stroke();x.beginPath();x.moveTo(0,i);x.lineTo(256,i);x.stroke();}
   const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(3.88/1.2,.55/1.2);return t;})();
 mat.ktile=M(0xffffff,{map:tileTex,roughness:.35});
-const bsTiles=box(0.0,3.88,.9,1.45,KZ0,KZ0+.012,mat.ktile);          // today: 15x15 white tiles up to the wall cabinets
-const bsUp=box(0.0,3.88,.9,1.1,KZ0,KZ0+.02,mat.kstone);               // planned: 20 cm LOCKEBO upstand
+const bsTiles=box(0.0,3.88,.9,1.45,KZ0,KZ0+.012,mat.ktile);bsTiles.userData.noMerge=true;          // today: 15x15 white tiles up to the wall cabinets
+const bsUp=box(0.0,3.88,.9,1.1,KZ0,KZ0+.02,mat.kstone);bsUp.userData.noMerge=true;               // planned: 20 cm LOCKEBO upstand
 const KITCHEN={now:{front:0xb2b4b1,stone:0x3a3c3d,tiles:true},plan:{front:0xcfc8b8,stone:0x7d7064,tiles:false}};
-function applyKitchen(k){const c=KITCHEN[k]||KITCHEN.now;mat.kfront.color.setHex(c.front);mat.kstone.color.setHex(c.stone);bsTiles.visible=c.tiles;bsUp.visible=!c.tiles;
+function applyKitchen(k){markShadow();const c=KITCHEN[k]||KITCHEN.now;mat.kfront.color.setHex(c.front);mat.kstone.color.setHex(c.stone);bsTiles.visible=c.tiles;bsUp.visible=!c.tiles;
   const a=document.getElementById('kNow'),b=document.getElementById('kPlan');if(a&&b){a.setAttribute('aria-pressed',String(k!=='plan'));b.setAttribute('aria-pressed',String(k==='plan'));}
   try{localStorage.setItem('lgh35-kitchen',k);}catch(e){}}
 // base run (left → right): drawers 40, dishwasher 60, sink 80, drawers 40+40, range 60, drawers 60
@@ -460,7 +537,7 @@ box(2.81,3.11,1.924,1.936,UZ1+.012,UZ1+.024,mat.steel);
 box(2.67,3.25,1.80,1.88,KZ0,UZ1+.02,mat.inox);
 // LED strip under the wall cabinets + warm fill light on the worktop
 {const g=new THREE.Group();fixed.add(g);const m=glowMat(0xffe2b0,0xd8d4cc);for(const [a,b] of [[0,2.36],[3.26,3.88]]) box(a+.02,b-.02,UB-.006,UB,UZ1-.06,UZ1-.03,m,g,false);
- const L=regLamp('kitchen-led',g,[1.6,1.38,2.3],0xffd9a0,.45,2.2,[m]);for(const x of[.5,3.55]){const l2=new THREE.PointLight(0xffeedd,.2,1.6,2);l2.position.set(x,1.38,2.3);g.add(l2);L.extra=(L.extra||[]).concat(l2);}}
+ const L=regLamp('kitchen-led',g,[1.6,1.38,2.3],0xffd9a0,.45,2.2,[m]);for(const x of[.5,3.55]){const l2=new THREE.PointLight(0xffeedd,.2,1.6,2);l2.userData.int0=.2;l2.position.set(x,1.38,2.3);g.add(l2);L.extra=(L.extra||[]).concat(l2);}}
 {const g=new THREE.Group();fixed.add(g);const m=glowMat(0xffffff,0xcfd2d2);box(2.84,3.08,1.795,1.8,2.2,2.24,m,g,false);regLamp('hood',g,[2.96,1.68,2.3],0xffffff,.5,1.4,[m]);}
 // ceiling lamps (photos)
 ceilLamp('vard-tak','bulb',3.6,7.6);ceilLamp('sov-tak','globe',7.78,8.3);ceilLamp('hall-tak','cone',6.62,1.95);
@@ -846,8 +923,8 @@ function enterRoom(rm,btn){clearRooms();setLbl(false);btn.setAttribute('aria-pre
 
 // ---------- controls ----------
 const wh=document.getElementById('wallh'),whv=document.getElementById('wallhv');
-wh.addEventListener('input',()=>{const v=+wh.value;clip.constant=v>=2.69?H+0.01:v;whv.textContent=v.toFixed(2).replace('.',',')+' m';});
-document.getElementById('tFurn').addEventListener('change',e=>{furn.visible=e.target.checked;if(!furn.visible)select(null);});
+wh.addEventListener('input',()=>{markShadow();const v=+wh.value;clip.constant=v>=2.69?H+0.01:v;whv.textContent=v.toFixed(2).replace('.',',')+' m';});
+document.getElementById('tFurn').addEventListener('change',e=>{markShadow();furn.visible=e.target.checked;if(!furn.visible)select(null);});
 document.getElementById('tLbl').addEventListener('change',e=>{lblWrap.hidden=!e.target.checked;});
 
 
@@ -862,16 +939,16 @@ const fm=v=>v.toFixed(2).replace('.',',');
 const normRot=r=>{r=((r%360)+360)%360;return r>180?r-360:r;};
 const selBox=new THREE.BoxHelper(undefined,0xe0a030); selBox.visible=false; scene.add(selBox);
 function itemPath(id){return COL+'/'+layoutId+'/items/'+id;}
-function place(g,d){g.position.set(+d.x||0,Math.min(2.5,Math.max(0,+d.y||0)),+d.z||0);g.rotation.y=(+d.rot||0)*Math.PI/180;}
+function place(g,d){markShadow();g.position.set(+d.x||0,Math.min(2.5,Math.max(0,+d.y||0)),+d.z||0);g.rotation.y=(+d.rot||0)*Math.PI/180;}
 function buildItem(id,d){const t=CAT[d.type];if(!t)return null;const g=new THREE.Group();g.userData.itemId=id;
-  const w=Math.min(6,Math.max(.1,+d.w||t.w)),dd=Math.min(6,Math.max(.1,+d.d||t.d));t.b(g,w,dd,colMat(d.color,t.m));place(g,d);furn.add(g);return g;}
+  const w=Math.min(6,Math.max(.1,+d.w||t.w)),dd=Math.min(6,Math.max(.1,+d.d||t.d));t.b(g,w,dd,colMat(d.color,t.m));g.updateMatrixWorld(true);const ms=[];g.traverse(o=>{if(o.isMesh&&!o.userData.noMerge&&!o.material.transparent)ms.push(o);});mergeMeshes(g,ms);place(g,d);furn.add(g);markShadow();return g;}
 function upsert(id,d){const key=[d.type,d.w,d.d,d.color].join('|');let it=itemsMap.get(id);
   if(it&&it.key===key){it.d=d;if(!(dragging&&dragging.id===id))place(it.g,d);}
-  else{if(it)furn.remove(it.g);const g=buildItem(id,d);if(!g){itemsMap.delete(id);return;}
+  else{if(it)furn.remove(it.g);lamps.delete('f:'+id);const g=buildItem(id,d);if(!g){itemsMap.delete(id);return;}
     if(dragging&&dragging.id===id&&it){g.position.copy(it.g.position);}
     itemsMap.set(id,{d,g,key});}
   if(sel===id)showSel();}
-function removeItem(id){const it=itemsMap.get(id);if(it)furn.remove(it.g);itemsMap.delete(id);if(sel===id)select(null);}
+function removeItem(id){const it=itemsMap.get(id);if(it){furn.remove(it.g);markShadow();}lamps.delete('f:'+id);itemsMap.delete(id);if(sel===id)select(null);}
 function clearItems(){for(const id of[...itemsMap.keys()])removeItem(id);}
 function setStatus(t,err){const el=$('fStatus');el.textContent=t||'';el.classList.toggle('err',!!err);}
 function fail(e){const c=e&&e.code;
@@ -880,7 +957,7 @@ function fail(e){const c=e&&e.code;
   else if(c==='resource_exhausted'||c==='resource-exhausted')setStatus('För många ändringar på kort tid. Vänta en stund.',true);
   else if(c==='not-found')setStatus('Möbeln finns inte längre – någon annan har tagit bort den.',true);
   else setStatus('Kunde inte spara. Kontrollera nätverket och försök igen.',true);}
-function setReadOnly(){canEdit=false;$('furnSec').classList.add('ro');$('fHint').textContent='Du kan titta på möbleringen men inte ändra den.';}
+function setReadOnly(){canEdit=false;document.body.classList.add('ro');$('fHint').textContent='Du kan titta på möbleringen men inte ändra den.';}
 const pend=new Map(),busy=new Set();
 async function persist(id,patch){if(!db)return;const path=itemPath(id);pend.set(path,{...(pend.get(path)||{}),...patch});if(busy.has(path))return;busy.add(path);setStatus('Sparar…');
   try{while(pend.has(path)){const p=pend.get(path);pend.delete(path);await db.doc(path).update(p);}setStatus('Sparat');}
@@ -969,7 +1046,7 @@ cv.addEventListener('pointerdown',e=>{if(walk.on||e.button!==0||dragging)return;
 cv.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==dragging.pid)return;
   if(!dragging.moved&&Math.hypot(e.clientX-dragging.sx,e.clientY-dragging.sy)<4)return;dragging.moved=true;
   setRay(e);const p=floorPt();if(!p)return;const it=itemsMap.get(dragging.id);if(!it)return;
-  it.g.position.x=snap(clampX(p.x+dragging.ox));it.g.position.z=snap(clampZ(p.z+dragging.oz));showSel();});
+  it.g.position.x=snap(clampX(p.x+dragging.ox));it.g.position.z=snap(clampZ(p.z+dragging.oz));showSel();markShadow();});
 function endDrag(e){if(walk.on)return;if(dragging&&e.pointerId===dragging.pid){const d=dragging;dragging=null;controls.enabled=true;downAt=null;const it=itemsMap.get(d.id);
     if(d.moved&&it){const x=r3(it.g.position.x),z=r3(it.g.position.z);it.d={...it.d,x,z};lastDel=null;lastMove={id:d.id,x:r3(d.x0),z:r3(d.z0),rot:d.rot0};$('undoBtn').hidden=false;persist(d.id,{x,z});}return;}
   if(downAt&&e.type==='pointerup'&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<4)select(downAt.id||null);downAt=null;}
@@ -979,7 +1056,7 @@ document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&(e.key==='z'|
   if(e.key==='r'||e.key==='R'){rotateSel(e.shiftKey?15:-90);e.preventDefault();}
   else if(e.key==='Delete'||e.key==='Backspace'){deleteSel();e.preventDefault();}
   else if(e.key.startsWith('Arrow')){const it=itemsMap.get(sel);const dx=e.key==='ArrowLeft'?-.05:e.key==='ArrowRight'?.05:0,dz=e.key==='ArrowUp'?-.05:e.key==='ArrowDown'?.05:0;
-    it.g.position.x=snap(clampX(it.g.position.x+dx));it.g.position.z=snap(clampZ(it.g.position.z+dz));showSel();e.preventDefault();
+    it.g.position.x=snap(clampX(it.g.position.x+dx));it.g.position.z=snap(clampZ(it.g.position.z+dz));showSel();markShadow();e.preventDefault();
     clearTimeout(nudgeT);const id=sel;nudgeT=setTimeout(()=>{const t=itemsMap.get(id);if(!t)return;const x=r3(t.g.position.x),z=r3(t.g.position.z);t.d={...t.d,x,z};persist(id,{x,z});},400);}});
 
 // connect to Firebase (config in firebase-config.js)
@@ -999,7 +1076,7 @@ $('seedBtn').onclick=async()=>{const b=$('seedBtn');b.disabled=true;setStatus('L
   auth.onAuthStateChanged(u=>{stopAll();
     if(!u){$('fOn').hidden=true;$('fOff').hidden=false;$('fOff').textContent='Logga in för att se och ändra möbleringen.';$('loginBtn').hidden=false;$('who').hidden=true;return;}
     $('loginBtn').hidden=true;$('who').hidden=false;$('whoName').textContent=u.email||u.displayName||'okänt konto';
-    $('fOff').hidden=true;$('fOn').hidden=false;canEdit=true;$('furnSec').classList.remove('ro');setStatus('');
+    $('fOff').hidden=true;$('fOn').hidden=false;canEdit=true;document.body.classList.remove('ro');setStatus('');
     let stored=null;try{stored=localStorage.getItem('lgh35-layout');}catch(e){}
     unsubLayouts=db.collection(COL).onSnapshot(sn=>{layouts=sn.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(+a.order||0)-(+b.order||0));
         $('seedBtn').hidden=sn.size>0;
@@ -1022,7 +1099,7 @@ function collectBoxes(){const out=[],b=new THREE.Box3(),pt=new THREE.Vector3();
   for(const D of doors){const leaf=D.lg.children[0];if(!leaf||!leaf.geometry)continue;leaf.updateWorldMatrix(true,false);const hw=leaf.geometry.parameters.width/2;
     for(let k=0;k<=6;k++){pt.set(-hw+2*hw*k/6,0,0).applyMatrix4(leaf.matrixWorld);out.push([pt.x-.03,pt.x+.03,pt.z-.03,pt.z+.03]);}}
   const add=o=>{if(o.material===mat.poche||o.isLight||o.userData.isDoorPivot)return;b.setFromObject(o);if(b.isEmpty())return;if(b.min.y<0.5&&b.max.y>0.3)out.push([b.min.x,b.max.x,b.min.z,b.max.z]);};
-  walls.children.forEach(add);fixed.children.forEach(add);ctx.children.forEach(add);if(furn.visible)furn.children.forEach(add);walk.boxes=out;}
+  for(const q of STATIC_BOXES)out.push(q);if(furn.visible)furn.children.forEach(add);walk.boxes=out;}
 function blocked(x,z){const r=.2;for(const q of walk.boxes)if(x>q[0]-r&&x<q[1]+r&&z>q[2]-r&&z<q[3]+r)return true;return false;}
 function walkStep(dt){const k=walk.keys;walk.acc+=dt;if(walk.acc>1){walk.acc=0;collectBoxes();}
   let f=(k.KeyW||k.ArrowUp?1:0)-(k.KeyS||k.ArrowDown?1:0),sd=(k.KeyD?1:0)-(k.KeyA?1:0);
@@ -1098,7 +1175,7 @@ function sunPos(dateStr,hours){const [y,m,d]=dateStr.split('-').map(Number);cons
   let az=Math.atan2(-Math.sin(H_),Math.tan(dec)*Math.cos(la)-Math.sin(la)*Math.cos(H_))/rad;az=(az+360)%360;return {el:el/rad,az};}
 const skyAmb=new THREE.AmbientLight(0xffffff,0);scene.add(skyAmb);
 const sunCol=new THREE.Color(),warmC=new THREE.Color(0xffc896),whiteC=new THREE.Color(0xffffff);
-function updateSun(){const ds=$('sunD').value,h=+$('sunT').value;const {el,az}=sunPos(ds,h);
+function updateSun(){markShadow();const ds=$('sunD').value,h=+$('sunT').value;const {el,az}=sunPos(ds,h);
   const b=az*Math.PI/180,dir=NV.clone().multiplyScalar(Math.cos(b)).add(EV.clone().multiplyScalar(Math.sin(b)));
   const er=Math.max(el,.5)*Math.PI/180;sun.position.set(dir.x*Math.cos(er)*25,Math.sin(er)*25,dir.z*Math.cos(er)*25);
   const day=Math.min(1,Math.max(0,(el+4)/14));DARK=EVE||day<.35;const s=EVE?0:Math.min(1,Math.max(0,Math.sin(el*Math.PI/180)*2.2));
@@ -1121,6 +1198,26 @@ $('tEve').addEventListener('change',e=>applyEve(e.target.checked));
 try{localStorage.removeItem('lgh35-eve');}catch(e){}
 updateSun();
 
+// ---------- phase 1 UI: tabs, mobile sheet, camera reset, inspector, lamps, export ----------
+{const tabs=[...document.querySelectorAll('.tabs [role=tab]')];const panel=$('panel');
+ function showTab(k,focus){for(const t of tabs){const on=t.dataset.tab===k;t.setAttribute('aria-selected',String(on));t.tabIndex=on?0:-1;$('pane-'+t.dataset.tab).hidden=!on;if(on&&focus)t.focus();}
+   panel.classList.remove('collapsed');try{localStorage.setItem('lgh35-tab',k);}catch(e){}requestAnimationFrame(resize);}
+ for(const t of tabs){t.addEventListener('click',()=>{if(t.getAttribute('aria-selected')==='true'&&matchMedia('(max-width:760px)').matches){panel.classList.toggle('collapsed');requestAnimationFrame(resize);return;}showTab(t.dataset.tab);});
+   t.addEventListener('keydown',e=>{const i=tabs.indexOf(t);if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();showTab(tabs[(i+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length].dataset.tab,true);}});}
+ $('sheetToggle').onclick=()=>{panel.classList.toggle('collapsed');requestAnimationFrame(resize);};
+ let k0='ov';try{k0=localStorage.getItem('lgh35-tab')||'ov';}catch(e){}if(!$('pane-'+k0))k0='ov';showTab(k0);
+ window.__showTab=showTab;}
+$('resetCam').onclick=()=>{if(walk.on)exitWalk();controls.autoRotate=false;clearRooms();setSeg('v3d');setLbl($('tLbl').checked);presets["3d"]();};
+$('selClose').onclick=()=>select(null);
+$('tMove').addEventListener('change',()=>{$('selHint').hidden=moveMode;});
+$('lampsOn').onclick=()=>{for(const L of lamps.values()){setLamp(L,true);try{localStorage.setItem('lgh35-lamp-'+L.key,'1');}catch(e){}}};
+$('lampsOff').onclick=()=>{for(const L of lamps.values()){setLamp(L,false);try{localStorage.setItem('lgh35-lamp-'+L.key,'0');}catch(e){}}};
+$('exportBtn').onclick=()=>{const items={};for(const [id,it] of itemsMap)items[id]=it.d;const txt=JSON.stringify({variant:(layouts.find(l=>l.id===layoutId)||{}).name||layoutId,items},null,1);
+  $('importForm').hidden=false;$('importText').value=txt;$('importLbl').textContent='Den valda variantens möblering ('+itemsMap.size+' möbler). Kopiera och klistra in i en annan AI eller spara som backup.';
+  $('importGo').hidden=true;$('copyExport').hidden=false;$('importText').select();};
+$('copyExport').onclick=async()=>{try{await navigator.clipboard.writeText($('importText').value);setStatus('Kopierat');}catch(e){$('importText').select();setStatus('Markerad – kopiera med Ctrl/Cmd+C');}};
+$('importBtn').addEventListener('click',()=>{$('importGo').hidden=false;$('copyExport').hidden=true;$('importText').value='';$('importLbl').textContent='Klistra in möbleringen du fått (JSON). Den uppdaterar varianten som är vald nu.';});
+
 // ---------- theme-aware background ----------
 function applyBg(){const c=getComputedStyle(document.documentElement).getPropertyValue('--scene').trim()||'#e6e9e8';scene.background=new THREE.Color(c);}
 applyBg(); matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyBg);
@@ -1131,8 +1228,8 @@ function resize(){const w=view.clientWidth,h=view.clientHeight;renderer.setSize(
 new ResizeObserver(resize).observe(view); resize();
 camera.position.set(7.5,11.5,11.5); controls.target.set(0,0,.3);
 const tmp=new THREE.Vector3();
-function tick(now){updateCompass();
-  for(const D of doors){if(D.cur!==D.tgt){const st=.06;D.cur=Math.abs(D.tgt-D.cur)<st?D.tgt:D.cur+Math.sign(D.tgt-D.cur)*st;D.lg.rotation.y=D.base+D.kk*D.ang*D.cur;if(D.cur===D.tgt&&walk.on)collectBoxes();}}
+function tick(now){updateCompass();if(shadowDirty){renderer.shadowMap.needsUpdate=true;shadowDirty=false;}
+  for(const D of doors){if(D.cur!==D.tgt){const st=.06;D.cur=Math.abs(D.tgt-D.cur)<st?D.tgt:D.cur+Math.sign(D.tgt-D.cur)*st;D.lg.rotation.y=D.base+D.kk*D.ang*D.cur;markShadow();if(D.cur===D.tgt&&walk.on)collectBoxes();}}
   if(anim&&!walk.on){let k=Math.min(1,(now-anim.start)/anim.ms);k=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
     camera.position.lerpVectors(anim.p0,anim.p1,k);controls.target.lerpVectors(anim.t0,anim.t1,k);camera.fov=anim.f0+(anim.f1-anim.f0)*k;camera.updateProjectionMatrix();if(k>=1)anim=null;}
   if(walk.on)walkStep(Math.min(.1,(now-(walk.last||now))/1000));else controls.update();walk.last=now; if(sel&&selBox.visible){const it=itemsMap.get(sel);if(it)selBox.setFromObject(it.g);} renderer.render(scene,camera);
@@ -1141,6 +1238,7 @@ function tick(now){updateCompass();
       const dist=camera.position.distanceTo(L.v);
       L.el.style.display=vis&&dist>1.2?'':'none'; if(vis)L.el.style.left=((tmp.x+1)/2*w)+'px',L.el.style.top=((1-tmp.y)/2*h)+'px';}}
   requestAnimationFrame(tick);}
+freezeStatic();
 requestAnimationFrame(tick);
 if(matchMedia('(prefers-reduced-motion: reduce)').matches){controls.enableDamping=false;}
 })();
