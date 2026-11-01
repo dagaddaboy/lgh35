@@ -56,6 +56,12 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px
   border:1px solid var(--line);border-radius:10px;padding:6px 8px 6px 12px;width:min(560px,calc(100% - 90px));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .sunbar input[type=range]{flex:1;min-width:0}.sunbar svg{color:#d99a1e;flex:none}.sunbar .num{min-width:42px}
 .walkui:not([hidden])~.sunbar{display:none}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.grid3 label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}.grid3 input{width:100%;min-width:0}
+.selwarn{margin:0;padding:6px 8px;border-radius:6px;background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger);font-size:13px}
+.dim{position:absolute;transform:translate(-50%,-50%);background:var(--accent);color:var(--accent-ink);font-family:var(--mono);font-size:11px;padding:1px 5px;border-radius:4px;white-space:nowrap}
+.dim.m{font-size:13px;padding:3px 7px;background:#1f2a2c;color:#fff}
+.measure-tip{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:5;background:var(--label-bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;max-width:calc(100% - 24px)}
+.view.measuring canvas{cursor:crosshair}
 .panel{grid-area:panel;background:var(--panel);border-right:1px solid var(--line);overflow:auto;min-height:0;
   padding-block:0 18px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:20px;
   display:flex;flex-direction:column;gap:20px}
@@ -160,6 +166,7 @@ body.ro .edit-only{display:none!important}
       <button id="vplan" aria-pressed="false" title="Ovanifrån">Plan</button>
       <button id="vrot" aria-pressed="false" title="Snurra runt">Snurra</button>
     </div>
+    <button id="measureBtn" class="btn tb" type="button" aria-pressed="false" title="Mät avstånd: klicka två punkter på golvet">Mät</button>
     <button id="walkBtn" class="btn tb" type="button" aria-pressed="false" title="Gå runt i lägenheten">Gå runt</button>
     <button id="resetCam" class="btn tb icon" type="button" title="Återställ kameran" aria-label="Återställ kameran"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   </header>
@@ -193,9 +200,11 @@ body.ro .edit-only{display:none!important}
         <form id="newLayoutForm" class="row2" hidden><label for="newLayoutName" class="sr">Namn på variant</label><input id="newLayoutName" type="text" placeholder="t.ex. Nytt vardagsrum" maxlength="40" required><button class="btn primary">Skapa</button><button type="button" id="newLayoutCancel" class="btn">Avbryt</button></form>
         <label class="switch edit-only"><input id="tMove" type="checkbox"><span class="sw-track" aria-hidden="true"></span><span><b>Flytta möbler</b><br><span class="hint">Av: möblerna ligger låsta medan du tittar runt</span></span></label>
         <div class="edit-only"><h2 class="sec-title">Lägg till möbel</h2>
+        <label for="addSearch" class="sr">Sök möbel</label><input id="addSearch" type="search" placeholder="Sök, t.ex. lampa, byrå, säng…" autocomplete="off" style="width:100%;margin-bottom:6px">
         <div class="row2"><label for="addType" class="sr">Möbeltyp</label><select id="addType"></select><button id="addBtn" class="btn primary" type="button">Lägg till</button></div></div>
+        <label class="tog edit-only" title="Håll Alt medan du drar för att släppa fästningen tillfälligt"><input id="tSnap" type="checkbox" checked> Fäst mot väggar och möbler</label>
         <p class="hint" id="fHint">Klicka på en möbel för att se den. Slå på Flytta möbler för att ändra.</p>
-        <div class="row"><span class="status" id="fStatus" role="status"></span><button id="undoBtn" class="btn link" type="button" hidden>Ångra</button></div>
+        <div class="row"><span class="status" id="fStatus" role="status"></span><span><button id="undoBtn" class="btn link" type="button" hidden title="Ctrl/Cmd+Z">Ångra</button> <button id="redoBtn" class="btn link" type="button" hidden title="Ctrl/Cmd+Shift+Z">Gör om</button></span></div>
         <div class="btnrow"><button id="importBtn" class="btn edit-only" type="button">Importera…</button><button id="exportBtn" class="btn" type="button">Exportera…</button></div>
         <form id="importForm" class="furn-ui" hidden><label for="importText" class="hint" id="importLbl">Klistra in möbleringen du fått (JSON). Den uppdaterar varianten som är vald nu.</label>
           <textarea id="importText" rows="6" spellcheck="false" placeholder='{"items":{ … }}'></textarea>
@@ -237,10 +246,13 @@ body.ro .edit-only{display:none!important}
   <main class="view" id="view">
     <div class="loading" id="loading">Laddar 3D-modell…</div>
     <div class="labels" id="labels"></div>
+    <div class="labels dims" id="dims"></div>
+    <div class="measure-tip" id="measureTip" hidden>Klicka två punkter på golvet. Shift låser till rak linje. Esc avslutar.</div>
     <div id="selCard" class="selcard inspector" hidden>
       <div class="row"><strong id="selName"></strong><button id="selClose" class="btn link" type="button" aria-label="Stäng">✕</button></div>
       <span class="num" id="selPos"></span>
-      <div class="grid2 edit-only"><label>Bredd (mm)<input id="selW" type="number" step="10" min="100" max="6000"></label><label>Djup (mm)<input id="selD" type="number" step="10" min="100" max="6000"></label></div>
+      <p class="selwarn" id="selWarn" hidden></p>
+      <div class="grid3 edit-only"><label>Bredd (mm)<input id="selW" type="number" step="10" min="100" max="6000"></label><label>Djup (mm)<input id="selD" type="number" step="10" min="100" max="6000"></label><label title="Höjd över golvet, t.ex. för vägghyllor">Upplyft (mm)<input id="selY" type="number" step="10" min="0" max="2500"></label></div>
       <div class="btnrow edit-only">
         <button id="rotL" class="btn" type="button" aria-label="Vrid 15 grader">↺ 15°</button>
         <button id="rotR" class="btn" type="button" aria-label="Vrid 90 grader">↻ 90°</button>
@@ -932,7 +944,7 @@ document.getElementById('tLbl').addEventListener('change',e=>{lblWrap.hidden=!e.
 const COL='lgh35_layouts';
 const $=id=>document.getElementById(id);
 const itemsMap=new Map();
-let moveMode=false,lastMove=null,sel=null,dragging=null,downAt=null,canEdit=true,db=null,layoutId=null,layouts=[],unsubItems=null,lastDel=null,nudgeT=null,delArm=null;
+let moveMode=false,sel=null,dragging=null,downAt=null,canEdit=true,db=null,layoutId=null,layouts=[],unsubItems=null,nudgeT=null,nudge0=null,delArm=null;
 const snap=v=>Math.round(v/0.05)*0.05, r3=v=>Math.round(v*1000)/1000;
 const clampX=v=>Math.min(10.1,Math.max(-1.35,v)), clampZ=v=>Math.min(10.25,Math.max(-0.3,v));
 const fm=v=>v.toFixed(2).replace('.',',');
@@ -959,32 +971,44 @@ function fail(e){const c=e&&e.code;
   else setStatus('Kunde inte spara. Kontrollera nätverket och försök igen.',true);}
 function setReadOnly(){canEdit=false;document.body.classList.add('ro');$('fHint').textContent='Du kan titta på möbleringen men inte ändra den.';}
 const pend=new Map(),busy=new Set();
+// undo/redo history (per variant, this browser only)
+const hist={u:[],r:[]};
+function updHistUI(){$('undoBtn').hidden=!hist.u.length;$('redoBtn').hidden=!hist.r.length;}
+function pushHist(op){op.layout=layoutId;hist.u.push(op);if(hist.u.length>60)hist.u.shift();hist.r.length=0;updHistUI();}
+function clearHist(){hist.u.length=0;hist.r.length=0;updHistUI();}
+async function applyOp(op,undo){if(op.layout!==layoutId){setStatus('Den ändringen gjordes i en annan variant.',true);return false;}
+  if(op.t==='patch'){if(!itemsMap.has(op.id)){setStatus('Möbeln finns inte längre.',true);return false;}const p=undo?op.b:op.a;localPatch(op.id,p);persist(op.id,p);select(op.id);return true;}
+  const create=(op.t==='add')!==undo, ref=db.doc(itemPath(op.id));
+  if(create){upsert(op.id,op.data);select(op.id);await ref.set(op.data);}else{removeItem(op.id);await ref.delete();}return true;}
+async function undoRedo(undo){if(!canEdit||!db)return;const from=undo?hist.u:hist.r,to=undo?hist.r:hist.u;const op=from.pop();if(!op){updHistUI();return;}
+  try{if(await applyOp(op,undo)){to.push(op);setStatus(undo?'Ångrat':'Gjort om');}}catch(e){fail(e);}updHistUI();}
 async function persist(id,patch){if(!db)return;const path=itemPath(id);pend.set(path,{...(pend.get(path)||{}),...patch});if(busy.has(path))return;busy.add(path);setStatus('Sparar…');
   try{while(pend.has(path)){const p=pend.get(path);pend.delete(path);await db.doc(path).update(p);}setStatus('Sparat');}
   catch(e){pend.delete(path);fail(e);}finally{busy.delete(path);}}
 function localPatch(id,patch){const it=itemsMap.get(id);if(!it)return;upsert(id,{...it.d,...patch});}
-function select(id){sel=id&&itemsMap.has(id)?id:null;selBox.visible=!!sel;$('selCard').hidden=!sel;if(sel)showSel();}
+function select(id){sel=id&&itemsMap.has(id)?id:null;selBox.visible=!!sel;$('selCard').hidden=!sel;if(sel)showSel();else updateAids();}
 function showSel(){const it=itemsMap.get(sel);if(!it)return;const t=CAT[it.d.type]||{name:it.d.type,m:mat.white};
   selBox.setFromObject(it.g);$('selName').textContent=t.name;
   $('selPos').textContent=fm(it.g.position.x)+' / '+fm(it.g.position.z)+' m · '+Math.round(+it.d.rot||0)+'°';
   const wEl=$('selW'),dEl=$('selD');if(document.activeElement!==wEl)wEl.value=Math.round((+it.d.w||t.w)*1000);if(document.activeElement!==dEl)dEl.value=Math.round((+it.d.d||t.d)*1000);
-  $('selColor').value=(typeof it.d.color==='string'&&/^#[0-9a-f]{6}$/i.test(it.d.color))?it.d.color:'#'+t.m.color.getHexString();}
-function rotateSel(delta){if(!sel||!canEdit)return;const it=itemsMap.get(sel);const rot=normRot((+it.d.rot||0)+delta);localPatch(sel,{rot});persist(sel,{rot});}
+  $('selColor').value=(typeof it.d.color==='string'&&/^#[0-9a-f]{6}$/i.test(it.d.color))?it.d.color:'#'+t.m.color.getHexString();
+  const yEl=$('selY');if(document.activeElement!==yEl)yEl.value=Math.round((+it.d.y||0)*1000);
+  updateAids();}
+function rotateSel(delta){if(!sel||!canEdit)return;const it=itemsMap.get(sel);const r0=+it.d.rot||0,rot=normRot(r0+delta);pushHist({t:'patch',id:sel,b:{rot:r0},a:{rot}});localPatch(sel,{rot});persist(sel,{rot});}
 async function ensureLayout(){if(layouts.some(l=>l.id===layoutId))return;await db.doc(COL+'/'+layoutId).set({name:layoutId==='nuvarande'?'Nuvarande':layoutId,order:0});}
 async function addItem(type,at,extra){const t=CAT[type];if(!t||!db||!canEdit)return;
   const p=at||{x:controls.target.x+CX,z:controls.target.z+CZ};
   const data={type,x:r3(snap(clampX(p.x))),z:r3(snap(clampZ(p.z))),rot:0,w:t.w,d:t.d,...(extra||{})};
   const ref=db.collection(COL+'/'+layoutId+'/items').doc();upsert(ref.id,data);select(ref.id);setStatus('Sparar…');
-  try{await ensureLayout();await ref.set(data);setStatus('Sparat');}catch(e){removeItem(ref.id);fail(e);}}
-async function deleteSel(){if(!sel||!canEdit)return;const id=sel,it=itemsMap.get(id);lastMove=null;lastDel={path:itemPath(id),id,data:{...it.d}};removeItem(id);
-  try{await db.doc(lastDel.path).delete();setStatus('Borttagen');$('undoBtn').hidden=false;}catch(e){upsert(id,lastDel.data);lastDel=null;fail(e);}}
-$('undoBtn').onclick=async()=>{if(lastMove){const L=lastMove;lastMove=null;$('undoBtn').hidden=true;if(itemsMap.has(L.id)){localPatch(L.id,{x:L.x,z:L.z,rot:L.rot});persist(L.id,{x:L.x,z:L.z,rot:L.rot});setStatus('Flytten är ångrad');}return;}if(!lastDel)return;const L=lastDel;lastDel=null;$('undoBtn').hidden=true;
-  try{await db.doc(L.path).set(L.data);if(L.path===itemPath(L.id)){upsert(L.id,L.data);select(L.id);}setStatus('Återställd');}catch(e){fail(e);}};
+  try{await ensureLayout();await ref.set(data);setStatus('Sparat');pushHist({t:'add',id:ref.id,data});}catch(e){removeItem(ref.id);fail(e);}}
+async function deleteSel(){if(!sel||!canEdit)return;const id=sel,it=itemsMap.get(id),data={...it.d};removeItem(id);
+  try{await db.doc(itemPath(id)).delete();pushHist({t:'del',id,data});setStatus('Borttagen – Ctrl/Cmd+Z ångrar');}catch(e){upsert(id,data);fail(e);}}
+$('undoBtn').onclick=()=>undoRedo(true);$('redoBtn').onclick=()=>undoRedo(false);
 
 // panel controls
-for(const [k,t] of Object.entries(CAT)){const o=document.createElement('option');o.value=k;o.textContent=t.name+' ('+Math.round(t.w*100)+'×'+Math.round(t.d*100)+' cm)';$('addType').appendChild(o);}
-$('addBtn').onclick=()=>addItem($('addType').value);
-$('tMove').addEventListener('change',e=>{moveMode=e.target.checked;if(canEdit&&itemsMap.size)$('fHint').textContent=moveMode?'Klicka på en möbel för att välja den, dra den sedan för att flytta. R vrider 90°, piltangenter flyttar 5 cm, Delete tar bort.':'Rotera och zooma fritt – möblerna ligger still. Klicka på en möbel för att se den. Slå på Flytta möbler för att ändra.';});
+// catalogue is rendered by renderCatalog() further down
+$('addBtn').onclick=()=>{if($('addType').value)addItem($('addType').value);};
+$('tMove').addEventListener('change',e=>{moveMode=e.target.checked;if(canEdit&&itemsMap.size)$('fHint').textContent=moveMode?'Klicka på en möbel för att välja den och dra den sedan. Den fäster mot väggar och andra möbler, och avstånden visas i cm. R vrider 90°, piltangenterna flyttar 5 cm, Delete tar bort, Ctrl/Cmd+Z ångrar.':'Rotera och zooma fritt – möblerna ligger still. Klicka på en möbel för att se den. Slå på Flytta möbler för att ändra.';});
 $('importBtn').onclick=()=>{$('importForm').hidden=false;$('importText').focus();};
 $('importCancel').onclick=()=>{$('importForm').hidden=true;};
 $('importForm').addEventListener('submit',async e=>{e.preventDefault();if(!db||!canEdit||!layoutId)return;
@@ -1005,19 +1029,20 @@ $('rotL').onclick=()=>rotateSel(15); $('rotR').onclick=()=>rotateSel(-90);
 $('delBtn').onclick=deleteSel;
 $('dupBtn').onclick=()=>{const it=itemsMap.get(sel);if(!it)return;const d={...it.d};addItem(d.type,{x:it.g.position.x+.3,z:it.g.position.z+.3},{rot:+d.rot||0,w:d.w,d:d.d,...(d.color?{color:d.color}:{}),...(+d.y>0?{y:+d.y}:{})});};
 function sizeChange(){if(!sel||!canEdit)return;const w=Math.min(6000,Math.max(100,+$('selW').value||0))/1000,d=Math.min(6000,Math.max(100,+$('selD').value||0))/1000;
-  const it=itemsMap.get(sel);if(Math.abs(w-(+it.d.w))<1e-4&&Math.abs(d-(+it.d.d))<1e-4)return;localPatch(sel,{w,d});persist(sel,{w,d});}
+  const it=itemsMap.get(sel),t=CAT[it.d.type];if(Math.abs(w-(+it.d.w))<1e-4&&Math.abs(d-(+it.d.d))<1e-4)return;pushHist({t:'patch',id:sel,b:{w:+it.d.w||t.w,d:+it.d.d||t.d},a:{w,d}});localPatch(sel,{w,d});persist(sel,{w,d});}
 $('selW').addEventListener('change',sizeChange);$('selD').addEventListener('change',sizeChange);
-$('selColor').addEventListener('change',e=>{if(!sel||!canEdit)return;const color=e.target.value;localPatch(sel,{color});persist(sel,{color});});
+$('selColor').addEventListener('change',e=>{if(!sel||!canEdit)return;const color=e.target.value,it=itemsMap.get(sel),t=CAT[it.d.type];pushHist({t:'patch',id:sel,b:{color:(typeof it.d.color==='string'&&it.d.color)||'#'+t.m.color.getHexString()},a:{color}});localPatch(sel,{color});persist(sel,{color});});
+$('selY').addEventListener('change',e=>{if(!sel||!canEdit)return;const it=itemsMap.get(sel);const y=r3(Math.min(2500,Math.max(0,+e.target.value||0))/1000),y0=+it.d.y||0;if(Math.abs(y-y0)<1e-4)return;pushHist({t:'patch',id:sel,b:{y:y0},a:{y}});localPatch(sel,{y});persist(sel,{y});});
 
 // layouts (variants)
 function renderLayouts(){const s=$('layoutSel');s.textContent='';const list=layouts.length?layouts:[{id:'nuvarande',name:'Nuvarande'}];
   if(!list.some(l=>l.id===layoutId)&&layoutId)list.push({id:layoutId,name:layoutId});
   for(const l of list){const o=document.createElement('option');o.value=l.id;o.textContent=(typeof l.name==='string'&&l.name)||l.id;s.appendChild(o);}
   s.value=layoutId||list[0].id;$('delLayoutBtn').hidden=layouts.length<2;}
-function switchLayout(id){if(id===layoutId&&unsubItems)return;if(unsubItems)unsubItems();clearItems();layoutId=id;try{localStorage.setItem('lgh35-layout',id);}catch(e){}
+function switchLayout(id){if(id===layoutId&&unsubItems)return;if(unsubItems)unsubItems();clearItems();layoutId=id;clearHist();try{localStorage.setItem('lgh35-layout',id);}catch(e){}
   renderLayouts();
   unsubItems=db.collection(COL+'/'+id+'/items').onSnapshot(sn=>{for(const ch of sn.docChanges()){if(ch.type==='removed')removeItem(ch.doc.id);else upsert(ch.doc.id,ch.doc.data());}
-      $('fHint').hidden=false;if(canEdit)$('fHint').textContent=itemsMap.size?(moveMode?'Klicka på en möbel för att välja den, dra den sedan för att flytta. R vrider 90°, piltangenter flyttar 5 cm, Delete tar bort.':'Rotera och zooma fritt – möblerna ligger still. Klicka på en möbel för att se den. Slå på Flytta möbler för att ändra.'):'Den här varianten har inga möbler ännu. Välj en möbel ovan och tryck Lägg till.';},
+      $('fHint').hidden=false;if(canEdit)$('fHint').textContent=itemsMap.size?(moveMode?'Klicka på en möbel för att välja den och dra den sedan. Den fäster mot väggar och andra möbler, och avstånden visas i cm. R vrider 90°, piltangenterna flyttar 5 cm, Delete tar bort, Ctrl/Cmd+Z ångrar.':'Rotera och zooma fritt – möblerna ligger still. Klicka på en möbel för att se den. Slå på Flytta möbler för att ändra.'):'Den här varianten har inga möbler ännu. Välj en möbel ovan och tryck Lägg till.';},
     e=>setStatus('Möbleringen kunde inte laddas. Ladda om sidan.',true));}
 $('layoutSel').addEventListener('change',e=>{select(null);switchLayout(e.target.value);});
 $('newLayoutBtn').onclick=()=>{$('newLayoutForm').hidden=false;$('newLayoutName').focus();};
@@ -1038,26 +1063,112 @@ const cv=renderer.domElement, ray=new THREE.Raycaster(), ndc=new THREE.Vector2()
 function setRay(e){const r=cv.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(ndc,camera);}
 function pickItem(){if(!furn.visible)return null;for(const h of ray.intersectObjects(furn.children,true)){let o=h.object;while(o&&!o.userData.itemId)o=o.parent;if(o)return o.userData.itemId;}return null;}
 function floorPt(){return ray.ray.intersectPlane(floorPl,hitP)?{x:hitP.x+CX,z:hitP.z+CZ}:null;}
-cv.addEventListener('pointerdown',e=>{if(walk.on||e.button!==0||dragging)return;setRay(e);const id=pickItem();downAt={x:e.clientX,y:e.clientY,id};
+cv.addEventListener('pointerdown',e=>{if(walk.on||e.button!==0||dragging||measure.on)return;setRay(e);const id=pickItem();downAt={x:e.clientX,y:e.clientY,id};
   if(!id||id!==sel||!moveMode||!canEdit||!db)return;           // orbit/zoom never moves furniture
   const p=floorPt();if(!p)return;const it=itemsMap.get(id);
-  dragging={id,ox:it.g.position.x-p.x,oz:it.g.position.z-p.z,x0:it.g.position.x,z0:it.g.position.z,rot0:+it.d.rot||0,moved:false,pid:e.pointerId,sx:e.clientX,sy:e.clientY};
+  dragging={id,ox:it.g.position.x-p.x,oz:it.g.position.z-p.z,x0:it.g.position.x,z0:it.g.position.z,rot0:+it.d.rot||0,moved:false,pid:e.pointerId,sx:e.clientX,sy:e.clientY,tg:obstacles(id)};
   controls.enabled=false;try{cv.setPointerCapture(e.pointerId);}catch(_){}e.preventDefault();},{capture:true});
 cv.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==dragging.pid)return;
   if(!dragging.moved&&Math.hypot(e.clientX-dragging.sx,e.clientY-dragging.sy)<4)return;dragging.moved=true;
   setRay(e);const p=floorPt();if(!p)return;const it=itemsMap.get(dragging.id);if(!it)return;
-  it.g.position.x=snap(clampX(p.x+dragging.ox));it.g.position.z=snap(clampZ(p.z+dragging.oz));showSel();markShadow();});
+  let nx=snap(clampX(p.x+dragging.ox)),nz=snap(clampZ(p.z+dragging.oz));
+  if($('tSnap').checked&&!e.altKey){const r=snapTo(it.g,nx,nz,dragging.tg);nx=r.x;nz=r.z;}
+  it.g.position.x=nx;it.g.position.z=nz;showSel();markShadow();});
 function endDrag(e){if(walk.on)return;if(dragging&&e.pointerId===dragging.pid){const d=dragging;dragging=null;controls.enabled=true;downAt=null;const it=itemsMap.get(d.id);
-    if(d.moved&&it){const x=r3(it.g.position.x),z=r3(it.g.position.z);it.d={...it.d,x,z};lastDel=null;lastMove={id:d.id,x:r3(d.x0),z:r3(d.z0),rot:d.rot0};$('undoBtn').hidden=false;persist(d.id,{x,z});}return;}
+    if(d.moved&&it){const x=r3(it.g.position.x),z=r3(it.g.position.z);it.d={...it.d,x,z};pushHist({t:'patch',id:d.id,b:{x:r3(d.x0),z:r3(d.z0)},a:{x,z}});persist(d.id,{x,z});}return;}
   if(downAt&&e.type==='pointerup'&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<4)select(downAt.id||null);downAt=null;}
 cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
-document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&(e.key==='z'||e.key==='Z')&&!$('undoBtn').hidden){const tg=e.target;if(!(tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA'))){$('undoBtn').click();e.preventDefault();return;}}if(!sel)return;const tg=e.target;if(tg&&(tg.tagName==='INPUT'||tg.tagName==='SELECT'||tg.tagName==='TEXTAREA'))return;
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&/^[zy]$/i.test(e.key)){const tg=e.target;if(!(tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA'))){undoRedo(!(e.key.toLowerCase()==='y'||e.shiftKey));e.preventDefault();return;}}if(!sel)return;const tg=e.target;if(tg&&(tg.tagName==='INPUT'||tg.tagName==='SELECT'||tg.tagName==='TEXTAREA'))return;
   if(e.key==='Escape'){select(null);return;}if(!canEdit||!moveMode)return;
   if(e.key==='r'||e.key==='R'){rotateSel(e.shiftKey?15:-90);e.preventDefault();}
   else if(e.key==='Delete'||e.key==='Backspace'){deleteSel();e.preventDefault();}
   else if(e.key.startsWith('Arrow')){const it=itemsMap.get(sel);const dx=e.key==='ArrowLeft'?-.05:e.key==='ArrowRight'?.05:0,dz=e.key==='ArrowUp'?-.05:e.key==='ArrowDown'?.05:0;
-    it.g.position.x=snap(clampX(it.g.position.x+dx));it.g.position.z=snap(clampZ(it.g.position.z+dz));showSel();markShadow();e.preventDefault();
-    clearTimeout(nudgeT);const id=sel;nudgeT=setTimeout(()=>{const t=itemsMap.get(id);if(!t)return;const x=r3(t.g.position.x),z=r3(t.g.position.z);t.d={...t.d,x,z};persist(id,{x,z});},400);}});
+    if(!nudge0||nudge0.id!==sel)nudge0={id:sel,x:r3(it.g.position.x),z:r3(it.g.position.z)};
+    it.g.position.x=r3(clampX(it.g.position.x+dx));it.g.position.z=r3(clampZ(it.g.position.z+dz));showSel();markShadow();e.preventDefault();
+    clearTimeout(nudgeT);const id=sel;nudgeT=setTimeout(()=>{const t=itemsMap.get(id);const n0=nudge0;nudge0=null;if(!t)return;const x=r3(t.g.position.x),z=r3(t.g.position.z);t.d={...t.d,x,z};if(n0&&n0.id===id)pushHist({t:'patch',id,b:{x:n0.x,z:n0.z},a:{x,z}});persist(id,{x,z});},400);}});
+
+// ---------- phase 2: catalogue, snapping, collisions, distances, measuring ----------
+const CATS=[['Soffor & fåtöljer','landskrona landskronaR landskronaL sofa armchair spindleArmchair evaChair'],
+  ['Bord','tableTeak table coffee coffeeBirch sideTableMarble pedestalTable desk'],
+  ['Stolar, pallar & bänkar','chair spindlechair kitchenbench tripptrapp deskChair stool roundStool stepStool bench hallBench storageBench'],
+  ['Sängar','bed bunkBed crib nightstand nightstandLegs bedsideCube'],
+  ['Förvaring','wardrobe dresser chestPine retroDresser chestTv shelf greyShelf stringShelf stringShelfBlack ivar pixelCabinet recordCabinet sideboardTv tvbench shoeCabinet shoeRack coatRack storageBox toyStorage'],
+  ['Belysning','lamp uplight pendant bumling flowerpot pleatLamp mushroomLamp callaLamp shadeLamp clampLamp'],
+  ['Balkong','outdoorSofa outdoorChair outdoorTable raisedPlanter storagePile foldedChairs'],
+  ['Övrigt','tvWall speaker rug plant potPlant terraPot']].map(([n,k])=>[n,k.split(' ')]);
+{const seen=new Set(CATS.flatMap(c=>c[1]));const rest=Object.keys(CAT).filter(k=>!seen.has(k));if(rest.length)CATS[CATS.length-1][1].push(...rest);}
+const norm=t=>t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function renderCatalog(q){const s=$('addType'),cur=s.value;s.textContent='';const nq=norm(q||'').trim();let first=null;
+  for(const [n,keys] of CATS){const og=document.createElement('optgroup');og.label=n;
+    for(const k of keys){const t=CAT[k];if(!t)continue;const label=t.name+' ('+Math.round(t.w*100)+'×'+Math.round(t.d*100)+' cm)';if(nq&&!norm(label+' '+n+' '+k).includes(nq))continue;
+      const o=document.createElement('option');o.value=k;o.textContent=label;og.appendChild(o);first=first||k;}
+    if(og.children.length)s.appendChild(og);}
+  if(!first){const o=document.createElement('option');o.disabled=true;o.textContent='Ingen möbel matchar';s.appendChild(o);}
+  s.value=[...s.options].some(o=>o.value===cur)?cur:(first||'');$('addBtn').disabled=!first;}
+renderCatalog('');
+$('addSearch').addEventListener('input',e=>renderCatalog(e.target.value));
+$('addSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();if(!$('addBtn').disabled)$('addBtn').click();}});
+try{$('tSnap').checked=localStorage.getItem('lgh35-snap')!=='0';}catch(e){}
+$('tSnap').addEventListener('change',e=>{try{localStorage.setItem('lgh35-snap',e.target.checked?'1':'0');}catch(_){}});
+
+const _bb=new THREE.Box3(),_bb2=new THREE.Box3();
+// world-space boxes [x0,x1,z0,z1,name] the given item can touch: walls/fixed fittings + other furniture at an overlapping height
+function obstacles(id){const it=itemsMap.get(id);if(!it)return[];it.g.updateMatrixWorld(true);_bb.setFromObject(it.g);const y0=_bb.min.y,y1=_bb.max.y;
+  const out=[];if(y0<0.5)for(const q of STATIC_BOXES)out.push([q[0],q[1],q[2],q[3],null]);
+  for(const [oid,o] of itemsMap){if(oid===id||!o.g.visible)continue;_bb2.setFromObject(o.g);if(_bb2.isEmpty())continue;
+    if(Math.min(y1,_bb2.max.y)-Math.max(y0,_bb2.min.y)>0.02)out.push([_bb2.min.x,_bb2.max.x,_bb2.min.z,_bb2.max.z,(CAT[o.d.type]||{}).name||o.d.type]);}
+  return out;}
+// move (nx,nz) so an edge of the item lands flush on a nearby face (within 8 cm)
+function snapTo(g,nx,nz,tg){g.position.x=nx;g.position.z=nz;g.updateMatrixWorld(true);_bb.setFromObject(g);const T=.08;let bx=null,bz=null;
+  for(const q of tg){
+    if(Math.min(_bb.max.z,q[3])-Math.max(_bb.min.z,q[2])>-0.01)for(const d of[q[1]-_bb.min.x,q[0]-_bb.max.x])if(Math.abs(d)<T&&(bx===null||Math.abs(d)<Math.abs(bx)))bx=d;
+    if(Math.min(_bb.max.x,q[1])-Math.max(_bb.min.x,q[0])>-0.01)for(const d of[q[3]-_bb.min.z,q[2]-_bb.max.z])if(Math.abs(d)<T&&(bz===null||Math.abs(d)<Math.abs(bz)))bz=d;}
+  return {x:r3(nx+(bx||0)),z:r3(nz+(bz||0))};}
+// helpers drawn while a piece is selected: distance lines to the nearest obstacle on each side, and a collision warning
+const dimWrap=$('dims'),dimLbls=[];let measureLbl=null;
+const dimMat=new THREE.LineBasicMaterial({color:0x2d6a6e,depthTest:false,transparent:true});
+const dimGeo=new THREE.BufferGeometry();dimGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(4*2*3),3));
+const dimLines=new THREE.LineSegments(dimGeo,dimMat);dimLines.renderOrder=999;dimLines.frustumCulled=false;dimLines.visible=false;scene.add(dimLines);
+for(let i=0;i<4;i++){const el=document.createElement('div');el.className='dim';el.hidden=true;dimWrap.appendChild(el);dimLbls.push({el,v:new THREE.Vector3(),on:false});}
+function updateAids(){const it=sel&&itemsMap.get(sel);const show=!!it&&moveMode&&canEdit&&furn.visible&&!walk.on;
+  selBox.material.color.setHex(0xe0a030);$('selWarn').hidden=true;dimLines.visible=false;for(const L of dimLbls){L.on=false;L.el.hidden=true;}
+  if(!it)return;it.g.updateMatrixWorld(true);_bb.setFromObject(it.g);const b={x0:_bb.min.x,x1:_bb.max.x,z0:_bb.min.z,z1:_bb.max.z};
+  const tg=obstacles(sel);
+  // collisions: more than 1 cm overlap with another piece (or a wall, for floor-standing pieces)
+  let hit=null;for(const q of tg){const ox=Math.min(b.x1,q[1])-Math.max(b.x0,q[0]),oz=Math.min(b.z1,q[3])-Math.max(b.z0,q[2]);if(ox>.01&&oz>.01){hit=q;if(q[4])break;}}
+  if(hit){selBox.material.color.setHex(0xd0453a);$('selWarn').textContent=hit[4]?'Krockar med '+hit[4].toLowerCase():'Går in i en vägg eller fast inredning';$('selWarn').hidden=false;}
+  if(!show)return;
+  const cx=(b.x0+b.x1)/2,cz=(b.z0+b.z1)/2,y=.03,pos=dimGeo.attributes.position.array;let n=0;
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+  dirs.forEach(([dx,dz],i)=>{let best=6;
+    for(const q of tg){if(dx){if(cz<q[2]||cz>q[3])continue;const d=dx>0?q[0]-b.x1:b.x0-q[1];if(d>-.005&&d<best)best=d;}
+      else{if(cx<q[0]||cx>q[1])continue;const d=dz>0?q[2]-b.z1:b.z0-q[3];if(d>-.005&&d<best)best=d;}}
+    if(best>=6||best<.005)return;
+    const sx=dx?(dx>0?b.x1:b.x0):cx, sz=dz?(dz>0?b.z1:b.z0):cz, ex=sx+dx*best, ez=sz+dz*best;
+    pos.set([sx,y,sz,ex,y,ez],n*6);n++;const L=dimLbls[i];L.on=true;L.v.set((sx+ex)/2,y,(sz+ez)/2);L.el.textContent=Math.round(best*100)+' cm';L.el.hidden=false;});
+  dimGeo.setDrawRange(0,n*2);dimGeo.attributes.position.needsUpdate=true;dimLines.visible=n>0;}
+$('tMove').addEventListener('change',updateAids);
+
+// measuring tool
+const measure={on:false,a:null,b:null,down:null};
+const mGeo=new THREE.BufferGeometry();mGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));
+const mLine=new THREE.Line(mGeo,new THREE.LineBasicMaterial({color:0xd0453a,depthTest:false,transparent:true}));mLine.renderOrder=1000;mLine.frustumCulled=false;mLine.visible=false;scene.add(mLine);
+const mDots=new THREE.Points(mGeo,new THREE.PointsMaterial({color:0xd0453a,size:8,sizeAttenuation:false,depthTest:false,transparent:true}));mDots.renderOrder=1000;mDots.frustumCulled=false;mDots.visible=false;scene.add(mDots);
+{const el=document.createElement('div');el.className='dim m';el.hidden=true;dimWrap.appendChild(el);measureLbl={el,v:new THREE.Vector3(),on:false};}
+function mPoint(e){setRay(e);if(!ray.ray.intersectPlane(floorPl,hitP))return null;const p=hitP.clone();p.x=Math.round(p.x*100)/100;p.z=Math.round(p.z*100)/100;p.y=.04;
+  if(measure.a&&!measure.b&&e.shiftKey){if(Math.abs(p.x-measure.a.x)>Math.abs(p.z-measure.a.z))p.z=measure.a.z;else p.x=measure.a.x;}return p;}
+function drawMeasure(a,b){const arr=mGeo.attributes.position.array;arr.set([a.x,a.y,a.z,b.x,b.y,b.z]);mGeo.attributes.position.needsUpdate=true;mGeo.computeBoundingSphere();mLine.visible=mDots.visible=true;
+  const d=a.distanceTo(b);measureLbl.v.set((a.x+b.x)/2,.04,(a.z+b.z)/2);measureLbl.el.textContent=d<1?Math.round(d*100)+' cm':(d.toFixed(2).replace('.',','))+' m';measureLbl.on=true;measureLbl.el.hidden=false;}
+function setMeasure(on){measure.on=on;measure.a=measure.b=null;mLine.visible=mDots.visible=false;measureLbl.on=false;measureLbl.el.hidden=true;
+  $('measureBtn').setAttribute('aria-pressed',String(on));$('measureTip').hidden=!on;view.classList.toggle('measuring',on);if(on){if(walk.on)exitWalk();select(null);}}
+$('measureBtn').onclick=()=>setMeasure(!measure.on);
+cv.addEventListener('pointerdown',e=>{if(measure.on&&e.button===0)measure.down={x:e.clientX,y:e.clientY};});
+cv.addEventListener('pointerup',e=>{if(!measure.on||!measure.down)return;const d=measure.down;measure.down=null;if(Math.hypot(e.clientX-d.x,e.clientY-d.y)>5)return;const p=mPoint(e);if(!p)return;
+  if(!measure.a||measure.b){measure.a=p;measure.b=null;drawMeasure(p,p);measureLbl.el.hidden=true;measureLbl.on=false;}else{measure.b=p;drawMeasure(measure.a,p);}});
+cv.addEventListener('pointermove',e=>{if(!measure.on||!measure.a||measure.b||e.buttons)return;const p=mPoint(e);if(p)drawMeasure(measure.a,p);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&measure.on)setMeasure(false);});
+function projectDims(){const w=view.clientWidth,h=view.clientHeight;for(const L of [...dimLbls,measureLbl]){if(!L.on)continue;tmp2.copy(L.v).project(camera);const vis=tmp2.z<1&&tmp2.z>-1;L.el.style.display=vis?'':'none';if(vis){L.el.style.left=((tmp2.x+1)/2*w)+'px';L.el.style.top=((1-tmp2.y)/2*h)+'px';}}}
+const tmp2=new THREE.Vector3();
 
 // connect to Firebase (config in firebase-config.js)
 let unsubLayouts=null;
@@ -1233,6 +1344,7 @@ function tick(now){updateCompass();if(shadowDirty){renderer.shadowMap.needsUpdat
   if(anim&&!walk.on){let k=Math.min(1,(now-anim.start)/anim.ms);k=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
     camera.position.lerpVectors(anim.p0,anim.p1,k);controls.target.lerpVectors(anim.t0,anim.t1,k);camera.fov=anim.f0+(anim.f1-anim.f0)*k;camera.updateProjectionMatrix();if(k>=1)anim=null;}
   if(walk.on)walkStep(Math.min(.1,(now-(walk.last||now))/1000));else controls.update();walk.last=now; if(sel&&selBox.visible){const it=itemsMap.get(sel);if(it)selBox.setFromObject(it.g);} renderer.render(scene,camera);
+  projectDims();
   if(!lblWrap.hidden){const w=view.clientWidth,h=view.clientHeight;
     for(const L of labelItems){tmp.copy(L.v).project(camera);const vis=tmp.z<1&&tmp.z>-1&&Math.abs(tmp.x)<1.1&&Math.abs(tmp.y)<1.1;
       const dist=camera.position.distanceTo(L.v);
