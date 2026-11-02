@@ -62,6 +62,10 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px
 .dim.m{font-size:13px;padding:3px 7px;background:#1f2a2c;color:#fff}
 .measure-tip{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:5;background:var(--label-bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;max-width:calc(100% - 24px)}
 .view.measuring canvas{cursor:crosshair}
+.renderui{position:absolute;top:12px;left:12px;z-index:6;width:280px;max-width:calc(100% - 24px);display:flex;flex-direction:column;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.renderui .grid2 label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.rbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}.rbar span{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.view.rendering .sunbar,.view.rendering .labels,.view.rendering .inspector{display:none!important}
 .panel{grid-area:panel;background:var(--panel);border-right:1px solid var(--line);overflow:auto;min-height:0;
   padding-block:0 18px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:20px;
   display:flex;flex-direction:column;gap:20px}
@@ -166,6 +170,7 @@ body.ro .edit-only{display:none!important}
       <button id="vplan" aria-pressed="false" title="Ovanifrån">Plan</button>
       <button id="vrot" aria-pressed="false" title="Snurra runt">Snurra</button>
     </div>
+    <button id="renderBtn" class="btn tb" type="button" aria-pressed="false" title="Rendera en fotorealistisk bild från nuvarande vy">Rendera</button>
     <button id="measureBtn" class="btn tb" type="button" aria-pressed="false" title="Mät avstånd: klicka två punkter på golvet">Mät</button>
     <button id="walkBtn" class="btn tb" type="button" aria-pressed="false" title="Gå runt i lägenheten">Gå runt</button>
     <button id="resetCam" class="btn tb icon" type="button" title="Återställ kameran" aria-label="Återställ kameran"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -248,6 +253,16 @@ body.ro .edit-only{display:none!important}
     <div class="loading" id="loading">Laddar 3D-modell…</div>
     <div class="labels" id="labels"></div>
     <div class="labels dims" id="dims"></div>
+    <div class="renderui" id="renderUI" hidden>
+      <div class="row"><strong>Rendering</strong><button id="renderStop" class="btn link" type="button" aria-label="Avsluta rendering">✕</button></div>
+      <div class="rbar" aria-hidden="true"><span id="renderBar"></span></div>
+      <p class="hint" id="renderStatus" role="status" style="margin:0">Laddar…</p>
+      <div class="grid2"><label>Kvalitet<select id="renderSamples"><option value="64">Snabb</option><option value="256" selected>Bra</option><option value="1024">Bäst</option></select></label>
+        <label>Upplösning<select id="renderRes"><option value="1">Skärm</option><option value="2">Skarp (2×)</option></select></label></div>
+      <label class="hint" style="display:flex;flex-direction:column;gap:2px">Ljusstyrka<input id="renderExp" type="range" min="0.5" max="5" step="0.1" value="1.8"></label>
+      <p class="hint" id="renderNote" hidden style="margin:0">Renderingen visar full vägghöjd.</p>
+      <div class="btnrow"><button id="renderSave" class="btn primary" type="button" disabled>Spara bild</button></div>
+    </div>
     <div class="measure-tip" id="measureTip" hidden>Klicka två punkter på golvet. Shift låser till rak linje. Esc avslutar.</div>
     <div id="selCard" class="selcard inspector" hidden>
       <div class="row"><strong id="selName"></strong><button id="selClose" class="btn link" type="button" aria-label="Stäng">✕</button></div>
@@ -282,7 +297,7 @@ body.ro .edit-only{display:none!important}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/","three/examples/jsm/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/","three-mesh-bvh":"https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.8.3/build/index.module.js","three-gpu-pathtracer":"https://cdn.jsdelivr.net/npm/three-gpu-pathtracer@0.0.23/build/index.module.js"}}</script>
 <script type="module">
 import * as T from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -294,6 +309,7 @@ import {GTAOPass} from 'three/addons/postprocessing/GTAOPass.js';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 window.THREE=Object.assign({},T,{OrbitControls,BufferGeometryUtils:{mergeBufferGeometries:mergeGeometries}});
 window.MODERN={RoomEnvironment,EffectComposer,RenderPass,GTAOPass,OutputPass};
+window.loadPT=()=>import('three-gpu-pathtracer');
 const a=document.createElement('script');a.textContent=document.getElementById('appsrc').textContent;document.body.appendChild(a);
 </script>
 <script>setTimeout(()=>{if(!window.THREE){const l=document.getElementById('loading');if(l)l.textContent='Kunde inte ladda 3D-biblioteket. Kontrollera nätverket och ladda om sidan.';}},15000);</script>
@@ -349,7 +365,7 @@ const mat={
        for(let k=0;k<60;k++){x.strokeStyle=`rgba(110,70,35,${.03+((k*7)%5)*.008})`;x.beginPath();const xx=i*pw+((k*37)%pw);x.moveTo(xx,(off)%1024);x.bezierCurveTo(xx+6,(off+80)%1024,xx-6,(off+170)%1024,xx+2,(off+256)%1024);x.stroke();}}
        x.fillStyle='rgba(80,55,30,.18)';x.fillRect(i*pw,0,1.2,1024);}
      for(let j=0;j<24;j++){x.fillStyle='rgba(80,55,30,.15)';x.fillRect(((j%6))*pw,((j*256+(j%2)*128))%1024,pw,1.5);}
-     const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;return t;})()}),1/.84,1/4.0), tile:M(0xc7cbcc,{roughness:.6}), slab:M(0x9aa09f), deck:M(0x8a7a66,{roughness:.9}),
+     const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;return t;})()}),1/.60,1/4.0), tile:M(0xc7cbcc,{roughness:.6}), slab:M(0x9aa09f), deck:M(0x8a7a66,{roughness:.9}),
   white:M(0xf7f7f5,{roughness:.5}), black:M(0x1f2222,{roughness:.4}), steel:M(0xb8bcbd,{roughness:.3,metalness:.6}),
   ceramic:M(0xffffff,{roughness:.25}), counter:M(0x3a3d3d,{roughness:.45}), wood:M(0x9b7350,{roughness:.6}), darkwood:M(0x5d4636),
   sofa:M(0x6f8a86), textile:M(0x8b9db0), linen:M(0xece9e2), duvet:M(0xb6c4c9), rug:M(0xb9b0a1,{roughness:1}), rug2:M(0x7f8f88,{roughness:1}),
@@ -399,7 +415,7 @@ function wallRun(axis,from,to,t0,t1,ops=[]){
   seg(cur,to,0,H);}
 // place a box given along/across coords
 function ab(axis,a0,a1,y0,y1,c0,c1,m,parent=walls){return axis==='x'?box(a0,a1,y0,y1,c0,c1,m,parent):box(c0,c1,y0,y1,a0,a1,m,parent);}
-const doors=[];
+const doors=[],PORTALS=[];
 function opening(axis,o,t0,t1,y0,y1){
   const mid=(t0+t1)/2, f=0.05;
   if(o.type==='win'||o.type==='french'){
@@ -407,7 +423,7 @@ function opening(axis,o,t0,t1,y0,y1){
     ab(axis,o.a,o.b,y0,y0+f,mid-0.04,mid+0.04,mat.frame); ab(axis,o.a,o.b,y1-f,y1,mid-0.04,mid+0.04,mat.frame);
     ab(axis,o.a,o.a+f,y0,y1,mid-0.04,mid+0.04,mat.frame); ab(axis,o.b-f,o.b,y0,y1,mid-0.04,mid+0.04,mat.frame);
     if(o.mull) ab(axis,(o.a+o.b)/2-0.03,(o.a+o.b)/2+0.03,y0,y1,mid-0.04,mid+0.04,mat.frame);
-    const g=ab(axis,o.a+f,o.b-f,y0+f,y1-f,mid-0.01,mid+0.01,o.frost?mat.frost:mat.glass); g.castShadow=false;
+    const g=ab(axis,o.a+f,o.b-f,y0+f,y1-f,mid-0.01,mid+0.01,o.frost?mat.frost:mat.glass); g.castShadow=false;PORTALS.push({axis,a0:o.a+f,a1:o.b-f,y0:y0+f,y1:y1-f,c:mid,k:o.frost?.45:1});
     if(y0>0.2) ab(axis,o.a-0.03,o.b+0.03,y0-0.02,y0,t0-0.03,t1+0.03,mat.white); // sill
   }
   if(o.type==='door'||o.type==='glassdoor'){
@@ -420,6 +436,7 @@ function opening(axis,o,t0,t1,y0,y1){
     const piv=new THREE.Group();
     if(axis==='x') piv.position.set(hx,0,face); else piv.position.set(face,0,hx);
     piv.userData.isDoorPivot=true;walls.add(piv);
+    if(o.type==='glassdoor')PORTALS.push({axis,a0:o.a,a1:o.b,y0:0,y1,c:(t0+t1)/2,k:1});
     const lw=w-0.02, th=0.04, lm=o.type==='glassdoor'?mat.glass:mat.leaf;
     const leaf=new THREE.Mesh(new THREE.BoxGeometry(lw,y1-0.01,th),lm);
     leaf.castShadow=o.type!=='glassdoor'; leaf.position.set(dir*lw/2,(y1-0.01)/2,o.side*th/2);
@@ -493,7 +510,7 @@ box(5.72,7.8,-0.2,0.0,-1.9,0.59,mat.ctx,ctx,false); box(7.8,10.13,-0.2,0.6,-0.6,
 const ctxLabels=[{name:'Trapphus',p:[6.7,-0.8]},{name:'Hisschakt',p:[9.0,1.5]}];
 
 // ---------- lamps: click a lamp to switch it on/off (remembered per browser) ----------
-const lamps=new Map();let EVE=false,DARK=false;
+const lamps=new Map();let EVE=false,DARK=false,SUNDAY=1;
 function glowMat(col,base){const soft=new THREE.Color(col).lerp(new THREE.Color(0xffffff),.5);return new THREE.MeshStandardMaterial({color:base??soft,emissive:soft,emissiveIntensity:0,roughness:.55,clippingPlanes:C,side:THREE.DoubleSide});}
 function setLamp(L,on){L.on=on;const v=DARK;L.light.visible=v;L.light.intensity=on?L.int0:0;if(L.extra)for(const l of L.extra){l.visible=v;l.intensity=on?l.userData.int0:0;}for(const m of L.mats)m.emissiveIntensity=on?L.glow:0;}
 function regLamp(key,parent,pos,col,int,dist,mats,glow=1){col=new THREE.Color(col).lerp(new THREE.Color(0xffffff),.55);const light=new THREE.PointLight(col,int*.7*Math.PI*2.8,dist,2);light.position.set(pos[0],pos[1],pos[2]);parent.add(light);
@@ -1315,7 +1332,7 @@ const sunCol=new THREE.Color(),warmC=new THREE.Color(0xffc896),whiteC=new THREE.
 function updateSun(){markShadow();const ds=$('sunD').value,h=+$('sunT').value;const {el,az}=sunPos(ds,h);
   const b=az*Math.PI/180,dir=NV.clone().multiplyScalar(Math.cos(b)).add(EV.clone().multiplyScalar(Math.sin(b)));
   const er=Math.max(el,.5)*Math.PI/180;sun.position.set(dir.x*Math.cos(er)*25,Math.sin(er)*25,dir.z*Math.cos(er)*25);
-  const day=Math.min(1,Math.max(0,(el+4)/14));DARK=EVE||day<.35;const s=EVE?0:Math.min(1,Math.max(0,Math.sin(el*Math.PI/180)*2.2));
+  const day=Math.min(1,Math.max(0,(el+4)/14));DARK=EVE||day<.35;SUNDAY=EVE?0:day;const s=EVE?0:Math.min(1,Math.max(0,Math.sin(el*Math.PI/180)*2.2));
   sunCol.copy(warmC).lerp(whiteC,Math.min(1,Math.max(0,el/8)));sun.color.copy(sunCol);
   const PI=Math.PI;sun.intensity=s*2.6*PI;hemi.intensity=(EVE?.12:.06+.3*day)*PI;fill.intensity=(EVE?0:.1*day)*PI;skyAmb.intensity=0;scene.environmentIntensity=EVE?.03:.12+.38*day;
   for(const L of lamps.values())setLamp(L,L.on);
@@ -1365,7 +1382,7 @@ function resize(){const w=view.clientWidth,h=view.clientHeight;renderer.setSize(
 new ResizeObserver(resize).observe(view); resize();
 camera.position.set(7.5,11.5,11.5); controls.target.set(0,0,.3);
 const tmp=new THREE.Vector3();
-function tick(now){updateCompass();if(shadowDirty){renderer.shadowMap.needsUpdate=true;shadowDirty=false;}
+function tick(now){if(R.on){renderTick();requestAnimationFrame(tick);return;}updateCompass();if(shadowDirty){renderer.shadowMap.needsUpdate=true;shadowDirty=false;}
   for(const D of doors){if(D.cur!==D.tgt){const st=.06;D.cur=Math.abs(D.tgt-D.cur)<st?D.tgt:D.cur+Math.sign(D.tgt-D.cur)*st;D.lg.rotation.y=D.base+D.kk*D.ang*D.cur;markShadow();if(D.cur===D.tgt&&walk.on)collectBoxes();}}
   if(anim&&!walk.on){let k=Math.min(1,(now-anim.start)/anim.ms);k=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
     camera.position.lerpVectors(anim.p0,anim.p1,k);controls.target.lerpVectors(anim.t0,anim.t1,k);camera.fov=anim.f0+(anim.f1-anim.f0)*k;camera.updateProjectionMatrix();if(k>=1)anim=null;}
@@ -1392,6 +1409,58 @@ new ResizeObserver(()=>{if(composer)composer.setSize(view.clientWidth,view.clien
 $('qualSel').addEventListener('change',e=>setQuality(e.target.value));
 setQuality(quality);
 window.__render=()=>composer;
+
+// ---------- photorealistic rendering (path tracing, loaded on demand) ----------
+const R={on:false,pt:null,mod:null,hidden:[],ceil:null,env:null,bg:null,envI:1,sky:null,t0:0,done:false,saveReq:false};
+const setR=t=>{$('renderStatus').textContent=t;};
+function ptWorldUV(o){if(o.userData.ptUV)return;o.geometry=o.geometry.clone();o.userData.ptUV=true;const g=o.geometry,P=g.attributes.position,N=g.attributes.normal,UV=g.attributes.uv;if(!UV||!N)return;
+  const ws=mat.oak.userData.ws.value,v=new THREE.Vector3(),n=new THREE.Vector3(),nm=new THREE.Matrix3().getNormalMatrix(o.matrixWorld);
+  for(let i=0;i<P.count;i++){v.fromBufferAttribute(P,i).applyMatrix4(o.matrixWorld);n.fromBufferAttribute(N,i).applyMatrix3(nm);const a=[Math.abs(n.x),Math.abs(n.y),Math.abs(n.z)];
+    let u,w;if(a[1]>Math.max(a[0],a[2])){u=v.z;w=v.x;}else if(a[0]>a[2]){u=v.z;w=v.y;}else{u=v.x;w=v.y;}UV.setXY(i,u*ws.x,w*ws.y);}UV.needsUpdate=true;}
+async function startRender(){if(R.on)return;if(measure.on)setMeasure(false);select(null);anim=null;
+  R.on=true;R.done=false;view.classList.add('rendering');$('renderUI').hidden=false;$('renderBtn').setAttribute('aria-pressed','true');$('renderSave').disabled=true;
+  $('renderNote').hidden=!(+$('wallh').value<2.69);controls.enabled=false;setR('Laddar renderaren…');$('renderBar').style.width='0';
+  try{R.mod=R.mod||await window.loadPT();}catch(e){setR('Kunde inte ladda renderaren. Kontrollera nätverket och försök igen.');return;}
+  if(!R.on)return;setR('Förbereder scenen…');await new Promise(r=>setTimeout(r,30));if(!R.on)return;
+  const hide=o=>{if(o.visible){o.visible=false;R.hidden.push(o);}};
+  scene.traverse(o=>{const m=o.material;if(m&&!Array.isArray(m)&&(m.colorWrite===false||m===mat.poche))hide(o);});[selBox,dimLines,mLine,mDots].forEach(hide);
+  scene.updateMatrixWorld(true);scene.traverse(o=>{if(o.isMesh&&o.material===mat.oak&&o.visible)ptWorldUV(o);});
+  if(camera.position.y<H-.05){R.ceil=box(-0.3,10.13,H,H+.06,-0.25,10.27,mat.white,root,false);R.ceil.updateMatrixWorld(true);}
+  const d=SUNDAY,sky=new R.mod.GradientEquirectTexture(128);sky.topColor.set(new THREE.Color(0x0a0f1c).lerp(new THREE.Color(0xa9c6ea),d));
+  sky.bottomColor.set(new THREE.Color(0x070707).lerp(new THREE.Color(0x8d8a80),d));sky.exponent=1.2;sky.update();R.sky=sky;
+  // sky "portals": invisible area lights in each window/balcony door, so daylight inside converges quickly
+  R.portals=[];if(d>.05)for(const P of PORTALS){const w=P.a1-P.a0,h=P.y1-P.y0;if(w<.2||h<.2)continue;const am=(P.a0+P.a1)/2,ym=(P.y0+P.y1)/2;
+    const L=new THREE.RectAreaLight(sky.topColor.clone().lerp(new THREE.Color(0xffffff),.3),2.2*d*P.k,w,h);let px,pz,tx,tz;
+    if(P.axis==='x'){const sg=Math.sign(CZ-P.c)||1;px=am;pz=P.c+sg*.06;tx=am;tz=pz+sg;}else{const sg=Math.sign(CX-P.c)||1;pz=am;px=P.c+sg*.06;tz=am;tx=px+sg;}
+    L.position.set(px-CX,ym,pz-CZ);L.lookAt(tx-CX,ym,tz-CZ);scene.add(L);R.portals.push(L);}
+  scene.updateMatrixWorld(true);
+  R.env=scene.environment;R.bg=scene.background;R.envI=scene.environmentIntensity;scene.environment=sky;scene.background=sky;scene.environmentIntensity=.1+1.1*d;
+  const pt=new R.mod.WebGLPathTracer(renderer);Object.assign(pt,{renderDelay:0,fadeDuration:0,minSamples:1,dynamicLowRes:false,rasterizeScene:true,bounces:6,transmissiveBounces:6,filterGlossyFactor:.5});pt.tiles.set(2,2);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,+$('renderRes').value));resize();
+  try{pt.setScene(scene,camera);}catch(e){console.error(e);setR('Renderingen kunde inte starta på den här enheten.');return;}
+  R.pt=pt;R.t0=performance.now();renderer.toneMappingExposure=+$('renderExp').value;}
+function stopRender(){if(!R.on)return;R.on=false;
+  if(R.pt){const pt=R.pt;R.pt=null;try{pt._pathTracer.dispose();pt._lowResPathTracer.dispose();pt._quad.dispose();}catch(e){}}
+  for(const o of R.hidden)o.visible=true;R.hidden=[];for(const L of R.portals||[])scene.remove(L);R.portals=[];if(R.ceil){root.remove(R.ceil);R.ceil=null;}
+  if(R.sky){scene.environment=R.env;scene.background=R.bg;scene.environmentIntensity=R.envI;R.sky.dispose();R.sky=null;}
+  renderer.toneMappingExposure=1.0;view.classList.remove('rendering');$('renderUI').hidden=true;$('renderBtn').setAttribute('aria-pressed','false');controls.enabled=!walk.on;
+  renderer.setPixelRatio(Math.min(devicePixelRatio,QUAL[quality].pr));if(composer)composer.setPixelRatio(renderer.getPixelRatio());resize();markShadow();}
+function renderTick(){const pt=R.pt;if(!pt){renderer.render(scene,camera);return;}
+  const target=+$('renderSamples').value;pt.pausePathTracing=pt.samples>=target;pt.renderSample();
+  if(R.saveReq){R.saveReq=false;renderer.domElement.toBlob(b=>{if(!b)return;const a=document.createElement('a');const t=new Date();const pad=x=>String(x).padStart(2,'0');
+    a.download='lgh35-rendering-'+t.getFullYear()+pad(t.getMonth()+1)+pad(t.getDate())+'-'+pad(t.getHours())+pad(t.getMinutes())+'.png';a.href=URL.createObjectURL(b);document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);},'image/png');}
+  const n=Math.min(pt.samples,target)|0,sec=Math.round((performance.now()-R.t0)/1000),tm=Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');
+  $('renderBar').style.width=(100*n/target)+'%';$('renderSave').disabled=n<1;
+  if(pt.isCompiling)setR('Förbereder grafikkortet…');else if(n>=target){if(!R.done){R.done=true;R.tDone=tm;}setR('Klar – '+target+' omgångar på '+R.tDone+'. Spara bilden eller välj Bäst för ännu renare bild.');}
+  else{R.done=false;setR('Renderar… '+n+' / '+target+' omgångar · '+tm);}}
+$('renderBtn').onclick=()=>R.on?stopRender():startRender();
+$('renderStop').onclick=stopRender;
+$('renderExp').addEventListener('input',e=>{if(R.on)renderer.toneMappingExposure=+e.target.value;});
+$('renderSave').onclick=()=>{R.saveReq=true;};
+$('renderRes').addEventListener('change',()=>{if(!R.on)return;renderer.setPixelRatio(Math.min(devicePixelRatio,+$('renderRes').value));resize();if(R.pt){R.pt.reset();R.t0=performance.now();}});
+$('renderSamples').addEventListener('change',()=>{R.t0=performance.now()-(R.pt&&R.pt.samples?0:0);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&R.on)stopRender();});
+window.__R=R;
 requestAnimationFrame(tick);
 if(matchMedia('(prefers-reduced-motion: reduce)').matches){controls.enableDamping=false;}
 })();
