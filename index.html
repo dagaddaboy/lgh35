@@ -340,7 +340,7 @@ function worldMapped(m,su,sv){m.userData.ws={value:new THREE.Vector2(su,sv)};m.c
   m.onBeforeCompile=sh=>{sh.uniforms.uWS=m.userData.ws;
     sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWP;varying vec3 vWN;').replace('#include <project_vertex>','#include <project_vertex>\nvWP=(modelMatrix*vec4(transformed,1.0)).xyz;vWN=normalize(mat3(modelMatrix)*objectNormal);');
     sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWP;varying vec3 vWN;uniform vec2 uWS;').replace('#include <map_fragment>',
-      'vec3 aN=abs(vWN);vec2 wuv=aN.y>max(aN.x,aN.z)?vWP.xz:(aN.x>aN.z?vWP.zy:vWP.xy);diffuseColor*=texture2D(map,wuv*uWS);');};return m;}
+      'vec3 aN=abs(vWN);vec2 wuv=aN.y>max(aN.x,aN.z)?vWP.zx:(aN.x>aN.z?vWP.zy:vWP.xy);diffuseColor*=texture2D(map,wuv*uWS);');};return m;}
 function M(color,o={}){return new THREE.MeshStandardMaterial(Object.assign({color,roughness:.85,metalness:0,clippingPlanes:C,clipShadows:true},o));}
 const mat={
   wall:M(0xf3f2ee), poche:new THREE.MeshBasicMaterial({color:0x2b3131,side:THREE.BackSide,clippingPlanes:C}),
