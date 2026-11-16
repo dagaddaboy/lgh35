@@ -43,6 +43,8 @@ Svara och skriv UI-texter på **svenska**. Henrik vill ha korta, sakliga svar me
 - `walls`, `fixed` (kök, badrum m.m.), `ctx` (omgivning) och `furn` (möbler) ligger under `root`.
 - `freezeStatic()` beräknar `STATIC_BOXES` (världs-AABB `[x0,x1,z0,z1]` för kollision och fästning) och slår sedan ihop statiska meshar per material. Undantag: `noMerge`, dörrar, lampor och transparenta material.
 - Delad `UNIT_BOX` som skalas per mesh, och `CYL_CACHE`. Möbler slås ihop per objekt i `buildItem`.
+- **Rendering på begäran:** `tick` ritar varje bildruta bara medan något händer och 1,2 s efteråt (`poke()`, `wakeUntil`), annars ungefär 1 gång per sekund. `markShadow()`, kamerarörelser, inmatning och storleksändring anropar `poke()`. Kod som ändrar scenen på annat sätt måste anropa `poke()` eller `markShadow()`.
+- **Adaptiv upplösning** (`adapt`, `adp`): om bildrutorna tar över 42 ms i snitt under interaktion sänks pixelkvoten i steg om 0,25 ner till 1, och därefter stängs AO av för sessionen.
 - Skuggor: `renderer.shadowMap.autoUpdate=false`. Anropa **`markShadow()`** efter allt som flyttar geometri.
 - Klippning för vägghöjd: `C=[clip]` på alla material. Det osynliga taket (`colorWrite:false`) kastar solskugga.
 
