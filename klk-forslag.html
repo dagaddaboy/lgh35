@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Klädkammaren – förslag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#eef0ef;--panel:#f8f9f8;--fg:#1d2524;--muted:#5f6b69;--line:#d3d9d7;--accent:#2d6a6e;--chip:#e3e8e6;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;--display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a1a;--panel:#1b2222;--fg:#e4eae8;--muted:#94a2a0;--line:#2e3838;--accent:#6fb3b6;--chip:#253030;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#141a1a;--panel:#1b2222;--fg:#e4eae8;--muted:#94a2a0;--line:#2e3838;--accent:#6fb3b6;--chip:#253030;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);line-height:1.55}
+main{max-width:760px;margin:0 auto;padding:16px}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(28px,6vw,40px);letter-spacing:.01em;margin:4px 0 0}
+.dim{font-family:var(--mono);font-size:13px;color:var(--muted)}
+a{color:var(--accent)}
+.stage{margin:14px 0 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+canvas{width:100%;height:min(62vh,520px);display:block;touch-action:none;cursor:grab}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px;border-top:1px solid var(--line)}
+button{font:500 14px var(--body);color:var(--fg);background:var(--chip);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer}
+button[aria-pressed="true"]{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.key{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-left:auto}
+.sw{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:-1px;margin-right:6px;border:1px solid var(--line)}
+ul{padding-left:20px;margin:16px 0}
+li{margin:6px 0;max-width:68ch}
+li b{font-weight:600}
+.note{font-size:14px;color:var(--muted);max-width:68ch}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div>
+    <a href="./">← Lägenheten</a>
+    <h1>Klädkammaren, förslag</h1>
+  </div>
+  <span class="dim">1,78 × 1,39 m · dörr ~75 cm</span>
+</header>
+
+<div class="stage">
+  <canvas id="c" aria-label="3D-vy av klädkammaren med föreslagen inredning"></canvas>
+  <div class="bar">
+    <button data-v="door" aria-pressed="true">Från dörren</button>
+    <button data-v="top" aria-pressed="false">Ovanifrån</button>
+    <button data-v="side" aria-pressed="false">Från sidan</button>
+    <span class="key"><span><span class="sw" style="background:#afa9ec"></span>Nytt</span><span><span class="sw" style="background:#f4f3ef"></span>Befintligt</span></span>
+  </div>
+</div>
+<p class="note">Dra för att vrida, nyp eller scrolla för att zooma.</p>
+
+<ul>
+  <li><b>Dubbel barnstång</b> längs vänster vägg, på ca 1,0 och 1,9 m. Hängytan går från ca 2,6 till 3,5 löpmeter, och barnen når den nedre själva.</li>
+  <li><b>Långa plagg längs bakväggen</b>: overaller och vuxenrockar, hela 1,78 m.</li>
+  <li><b>Hylla på höger vägg</b>, 25–30 cm djup, hyllplan på 0,5 / 0,875 / 1,25 / 1,625 m. Dammsugaren och en kasse står under.</li>
+  <li><b>Extra överhylla på ca 2,35 m</b>, så att lådor och ramar inte behöver staplas. Kräver att takhöjden räcker.</li>
+  <li><b>Rensa först</b>: leksaker till barnrummet, urvuxna kläder i märkta lådor högst upp, pulkor på krokar under säsong.</li>
+</ul>
+<p class="note">Takhöjden (2,6 m) är uppskattad – mät innan överhyllan köps.</p>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const W=1.78,D=1.39,HW=2.6,NEW=0xafa9ec,OLD=0xf4f3ef;
+const cv=document.getElementById('c');
+const r=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+r.setPixelRatio(Math.min(devicePixelRatio,2));
+const sc=new THREE.Scene();
+const cam=new THREE.PerspectiveCamera(45,1,0.05,50);
+sc.add(new THREE.HemisphereLight(0xffffff,0x8a8778,0.85));
+const dl=new THREE.DirectionalLight(0xffffff,0.45);dl.position.set(-1,4,-3);sc.add(dl);
+
+function box(x0,x1,y0,y1,z0,z1,col,op){
+  const mt=new THREE.MeshLambertMaterial({color:col});
+  if(op!==undefined){mt.transparent=true;mt.opacity=op;mt.depthWrite=false;}
+  const m=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,y1-y0,z1-z0),mt);
+  m.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);sc.add(m);
+  if(op!==undefined){const e=new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),new THREE.LineBasicMaterial({color:0x9a988f}));e.position.copy(m.position);sc.add(e);}
+  return m;
+}
+function rod(axis,a0,a1,y,c,col){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(.013,.013,a1-a0,10),new THREE.MeshLambertMaterial({color:col}));
+  if(axis==='x'){m.rotation.z=Math.PI/2;m.position.set((a0+a1)/2,y,c);}else{m.rotation.x=Math.PI/2;m.position.set(c,y,(a0+a1)/2);}
+  sc.add(m);
+}
+let s=7;const rnd=()=>{s=(s*9301+49297)%233280;return s/233280;};
+const CL=[0xd98fb7,0xb08850,0xe3c33a,0x2d2d2d,0xd6a39a,0xa15fb5,0xe9e3d6,0x2f3b55,0x8a8a8a,0x6f7d5a];
+const pick=()=>CL[Math.floor(rnd()*CL.length)];
+
+// floor and walls (x=0 is the right wall seen from the door)
+box(0,W,-0.02,0,0,D,0xc9a97c);
+box(W,W+.03,0,HW,0,D,0xf2f0ea,.3);box(-.03,0,0,HW,0,D,0xf2f0ea,.3);box(-.03,W+.03,0,HW,D,D+.03,0xf2f0ea,.3);
+box(-.03,.23,0,HW,-.03,0,0xf2f0ea,.18);box(.98,W+.03,0,HW,-.03,0,0xf2f0ea,.18);box(.23,.98,2.05,HW,-.03,0,0xf2f0ea,.18);
+
+// existing top shelves and rods, new upper shelf and lower kids' rod
+box(0,W,1.99,2.02,D-.43,D,OLD);box(W-.43,W,1.99,2.02,0,D-.43,OLD);
+box(0,W,2.34,2.37,D-.43,D,NEW);
+rod('x',0,W,1.9,D-.28,0xcfcfcf);
+rod('z',0,D-.55,1.9,W-.28,0xcfcfcf);rod('z',0,D-.55,1.0,W-.28,NEW);
+
+// garments
+for(let x=.05;x<W-.05;x+=.075){const L=.9+rnd()*.25;box(x-.02,x+.02,1.88-L,1.88,D-.53,D-.03,pick());}
+for(let z=.06;z<D-.58;z+=.07){const L=.55+rnd()*.1;box(W-.5,W-.06,1.88-L,1.88,z-.018,z+.018,pick());}
+for(let z=.06;z<D-.58;z+=.075){const L=.5+rnd()*.1;box(W-.5,W-.06,.98-L,.98,z-.018,z+.018,pick());}
+
+// new shelf on the right wall, baskets, vacuum
+for(const y of[.5,.875,1.25,1.625,2.0])box(0,.3,y,y+.025,0,D-.55,NEW);
+for(const z of[.1,D-.65])box(0,.012,.45,2.05,z-.012,z+.012,0x8f8bb8);
+const BK=[0x9a9a9a,0xcbb894,0xa9d3da];
+for(const y of[.525,.9,1.275,1.65])for(const z of[.06,.45])box(.03,.27,y,y+.2,z,z+.32,BK[Math.floor(rnd()*3)]);
+box(.04,.28,0,.3,.1,.45,0x333333);box(.08,.2,.3,.85,.38,.42,0x555555);
+
+// boxes on the shelves
+for(let i=0;i<3;i++){const x=.3+i*.45;box(x,x+.38,2.02,2.3,D-.42,D-.04,0xa9d3da);}
+for(let i=0;i<4;i++)box(.05+i*.42,.43+i*.42,2.37,2.6,D-.42,D-.06,i%2?0xf4f4f4:0xdfe8ea);
+box(W-.42,W-.05,2.02,2.24,.1,.5,0xf4f4f4);box(W-.42,W-.05,2.02,2.2,.55,.85,0x4f5a3c);
+
+// camera
+const T=new THREE.Vector3(.89,1.15,.65);let th=.15,ph=1.2,R=3.2;
+const V={door:[.15,1.2,3.2],top:[0,.08,3.6],side:[-1.25,1.15,3.2]};
+function upd(){cam.position.set(T.x+R*Math.sin(ph)*Math.sin(th),T.y+R*Math.cos(ph),T.z-R*Math.sin(ph)*Math.cos(th));cam.lookAt(T);r.render(sc,cam);}
+function size(){const w=cv.clientWidth,h=cv.clientHeight;r.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();upd();}
+const btns=[...document.querySelectorAll('button[data-v]')];
+function press(k){btns.forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===k?'true':'false'));}
+btns.forEach(b=>b.onclick=()=>{[th,ph,R]=V[b.dataset.v];press(b.dataset.v);upd();});
+
+const pts=new Map();let pinch=0;
+cv.addEventListener('pointerdown',e=>{pts.set(e.pointerId,{x:e.clientX,y:e.clientY});cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';});
+cv.addEventListener('pointermove',e=>{
+  if(!pts.has(e.pointerId))return;const p=pts.get(e.pointerId);
+  if(pts.size===2){const [a,b]=[...pts.values()];const d0=Math.hypot(a.x-b.x,a.y-b.y);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});const [c,d]=[...pts.values()];const d1=Math.hypot(c.x-d.x,c.y-d.y);R=Math.min(5.5,Math.max(1.6,R*d0/d1));}
+  else{th+=(e.clientX-p.x)*.008;ph=Math.min(1.5,Math.max(.08,ph-(e.clientY-p.y)*.006));pts.set(e.pointerId,{x:e.clientX,y:e.clientY});}
+  press('');upd();
+});
+const end=e=>{pts.delete(e.pointerId);if(!pts.size)cv.style.cursor='grab';};
+cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+cv.addEventListener('wheel',e=>{e.preventDefault();R=Math.min(5.5,Math.max(1.6,R+e.deltaY*.003));upd();},{passive:false});
+window.addEventListener('resize',size);size();
+</script>
+</body>
+</html>
