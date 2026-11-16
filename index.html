@@ -666,7 +666,35 @@ box(9.66,9.76,.15,.65,5.02,6.28,mat.white); box(9.6,9.78,.85,.88,4.92,6.38,mat.w
 box(9.66,9.76,.15,.75,8.35,9.85,mat.white); box(9.6,9.78,.85,.88,7.6,9.25,mat.white);
 box(5.77,6.37,0,2.2,8.2,10.0,mat.white); for(const z of[8.8,9.4]) box(6.37,6.38,.05,2.15,z-.004,z+.004,mat.counter);
 box(7.546,7.55,.015,H,0.84,3.02,mat.pink,walls,false);                         // pink hall wall (photo)
-box(5.77,6.22,0,2.0,3.15,4.48,mat.white); box(6.22,7.52,0,2.0,4.05,4.48,mat.white);
+// Walk-in closet, current state (photo 2026-11-16). Local frame: x from the right wall seen from the door (5.77), z from the door wall (3.12)
+{const X=5.77,Z=3.12,W=1.78,D=1.39,K=(x0,x1,y0,y1,z0,z1,m)=>box(X+x0,X+x1,y0,y1,Z+z0,Z+z1,m);
+ const km={rod:mat.steel,shelf:mat.white,blue:M(0x2051b8,{roughness:.6}),red:M(0xc8372d),yel:M(0xe5c22e),orange:M(0xe8642a),card:M(0xc59a63),
+   dark:M(0x23272d,{roughness:.5}),bag:M(0xd9d6e2,{roughness:.4}),grey:M(0x8d9296,{roughness:1}),olive:M(0x4b5a3f),clear:M(0xd9e2e4,{roughness:.3}),
+   frameD:M(0x4a4038),brown:M(0x6b4a2e,{roughness:1}),suit:M(0x1e1f21,{roughness:.4})};
+ const CL=[0xd98fb7,0xb08850,0xe3c33a,0x2d2d2d,0xd6a39a,0xa15fb5,0xe9e3d6,0x2f3b55,0x8a8a8a,0x6f7d5a].map(c=>M(c,{roughness:.95}));
+ let s=11;const rnd=()=>{s=(s*9301+49297)%233280;return s/233280;},pick=()=>CL[Math.floor(rnd()*CL.length)];
+ // hat shelf on back and left wall, rods at 1.9
+ K(0,W,1.99,2.02,D-.43,D,km.shelf);K(W-.43,W,1.99,2.02,0,D-.43,km.shelf);
+ K(0,W,1.89,1.915,D-.29,D-.265,km.rod);K(W-.29,W-.265,1.89,1.915,0,D-.55,km.rod);
+ // garments: long coats along the back, kids' jackets along the left wall
+ for(let x=.05;x<W-.05;x+=.075){const L=.85+rnd()*.3;K(x-.02,x+.02,1.88-L,1.88,D-.53,D-.03,pick());}
+ for(let z=.06;z<D-.58;z+=.065){const L=.6+rnd()*.25;K(W-.5,W-.06,1.88-L,1.88,z-.018,z+.018,pick());}
+ // floor clutter
+ K(.12,.66,0,.75,.15,.6,km.blue);K(.3,.5,.75,.88,.25,.45,km.yel);
+ K(0,.42,0,.6,.62,1.0,km.red);K(.05,.35,.6,.82,.65,.95,km.yel);K(.02,.05,0,.48,.5,1.0,km.shelf);K(.06,.09,0,.45,.52,.98,km.shelf);
+ for(const [x,z] of[[.5,.85],[.56,.9],[.62,.86]])cyl(X+x,Z+z,.028,0,1.6,km.card);
+ {const b=new THREE.Mesh(new THREE.SphereGeometry(.12,20,14),M(0xe58aa0));b.position.set(X+.28,.94,Z+.8);b.castShadow=b.receiveShadow=true;fixed.add(b);
+  const o=new THREE.Mesh(new THREE.SphereGeometry(.07,16,12),km.orange);o.position.set(X+.12,.7,Z+1.02);o.castShadow=true;fixed.add(o);}
+ K(.72,1.04,0,.28,.22,.52,km.dark);K(.86,.89,.28,.95,.44,.47,km.dark);K(.7,1.0,.05,.09,.55,.85,km.dark);
+ K(1.0,1.5,0,.4,.05,.45,km.bag);K(1.15,1.72,0,.35,.45,.85,km.grey);K(.6,1.1,0,.45,.88,1.3,km.dark);K(.62,1.0,0,.25,.58,.86,CL[0]);K(1.1,1.7,0,.3,.88,1.3,CL[5]);
+ // on the hat shelves
+ for(let i=0;i<3;i++)K(.03,.4,2.02+i*.22,2.23+i*.22,D-.42,D-.05,mat.mint);
+ K(.42,.78,2.02,2.3,D-.42,D-.06,km.shelf);K(.44,.8,2.3,2.62,D-.4,D-.08,km.olive);
+ K(.8,1.15,2.02,2.25,D-.42,D-.06,km.clear);K(.82,1.12,2.25,2.37,D-.4,D-.08,km.shelf);K(.82,1.12,2.37,2.58,D-.4,D-.08,km.clear);
+ K(1.17,1.19,2.02,2.62,D-.4,D-.05,mat.frame);K(1.2,1.22,2.02,2.55,D-.38,D-.07,km.frameD);K(1.23,1.25,2.02,2.48,D-.36,D-.09,km.card);
+ K(1.32,W,2.02,2.36,D-.42,D-.02,km.card);K(1.38,1.74,2.36,2.52,D-.4,D-.06,km.shelf);
+ K(W-.42,W-.05,2.02,2.46,.04,.48,km.suit);K(W-.4,W-.1,2.02,2.14,.5,.76,km.yel);K(W-.42,W-.05,2.14,2.3,.5,.86,km.brown);K(W-.42,W-.08,2.02,2.12,.78,.95,mat.mint);
+}
 
 // ---------- movable furniture: builders (local frame: width along x, depth along z, front faces +z) ----------
 const matCache={};
