@@ -666,35 +666,51 @@ box(9.66,9.76,.15,.65,5.02,6.28,mat.white); box(9.6,9.78,.85,.88,4.92,6.38,mat.w
 box(9.66,9.76,.15,.75,8.35,9.85,mat.white); box(9.6,9.78,.85,.88,7.6,9.25,mat.white);
 box(5.77,6.37,0,2.2,8.2,10.0,mat.white); for(const z of[8.8,9.4]) box(6.37,6.38,.05,2.15,z-.004,z+.004,mat.counter);
 box(7.546,7.55,.015,H,0.84,3.02,mat.pink,walls,false);                         // pink hall wall (photo)
-// Walk-in closet, current state (photo 2026-11-16). Local frame: x from the right wall seen from the door (5.77), z from the door wall (3.12)
-{const X=5.77,Z=3.12,W=1.78,D=1.39,K=(x0,x1,y0,y1,z0,z1,m)=>box(X+x0,X+x1,y0,y1,Z+z0,Z+z1,m);
- const km={rod:mat.steel,shelf:mat.white,blue:M(0x2051b8,{roughness:.6}),red:M(0xc8372d),yel:M(0xe5c22e),orange:M(0xe8642a),card:M(0xc59a63),
-   dark:M(0x23272d,{roughness:.5}),bag:M(0xd9d6e2,{roughness:.4}),grey:M(0x8d9296,{roughness:1}),olive:M(0x4b5a3f),clear:M(0xd9e2e4,{roughness:.3}),
-   frameD:M(0x4a4038),brown:M(0x6b4a2e,{roughness:1}),suit:M(0x1e1f21,{roughness:.4})};
- const CL=[0xd98fb7,0xb08850,0xe3c33a,0x2d2d2d,0xd6a39a,0xa15fb5,0xe9e3d6,0x2f3b55,0x8a8a8a,0x6f7d5a].map(c=>M(c,{roughness:.95}));
- let s=11;const rnd=()=>{s=(s*9301+49297)%233280;return s/233280;},pick=()=>CL[Math.floor(rnd()*CL.length)];
- // hat shelf on back and left wall, rods at 1.9
- K(0,W,1.99,2.02,D-.43,D,km.shelf);K(W-.43,W,1.99,2.02,0,D-.43,km.shelf);
- K(0,W,1.89,1.915,D-.29,D-.265,km.rod);K(W-.29,W-.265,1.89,1.915,0,D-.55,km.rod);
- // garments: long coats along the back, kids' jackets along the left wall
- for(let x=.05;x<W-.05;x+=.075){const L=.85+rnd()*.3;K(x-.02,x+.02,1.88-L,1.88,D-.53,D-.03,pick());}
- for(let z=.06;z<D-.58;z+=.065){const L=.6+rnd()*.25;K(W-.5,W-.06,1.88-L,1.88,z-.018,z+.018,pick());}
- // floor clutter
- K(.12,.66,0,.75,.15,.6,km.blue);K(.3,.5,.75,.88,.25,.45,km.yel);
- K(0,.42,0,.6,.62,1.0,km.red);K(.05,.35,.6,.82,.65,.95,km.yel);K(.02,.05,0,.48,.5,1.0,km.shelf);K(.06,.09,0,.45,.52,.98,km.shelf);
- for(const [x,z] of[[.5,.85],[.56,.9],[.62,.86]])cyl(X+x,Z+z,.028,0,1.6,km.card);
- {const b=new THREE.Mesh(new THREE.SphereGeometry(.12,20,14),M(0xe58aa0));b.position.set(X+.28,.94,Z+.8);b.castShadow=b.receiveShadow=true;fixed.add(b);
-  const o=new THREE.Mesh(new THREE.SphereGeometry(.07,16,12),km.orange);o.position.set(X+.12,.7,Z+1.02);o.castShadow=true;fixed.add(o);}
- K(.72,1.04,0,.28,.22,.52,km.dark);K(.86,.89,.28,.95,.44,.47,km.dark);K(.7,1.0,.05,.09,.55,.85,km.dark);
- K(1.0,1.5,0,.4,.05,.45,km.bag);K(1.15,1.72,0,.35,.45,.85,km.grey);K(.6,1.1,0,.45,.88,1.3,km.dark);K(.62,1.0,0,.25,.58,.86,CL[0]);K(1.1,1.7,0,.3,.88,1.3,CL[5]);
- // on the hat shelves
- for(let i=0;i<3;i++)K(.03,.4,2.02+i*.22,2.23+i*.22,D-.42,D-.05,mat.mint);
- K(.42,.78,2.02,2.3,D-.42,D-.06,km.shelf);K(.44,.8,2.3,2.62,D-.4,D-.08,km.olive);
- K(.8,1.15,2.02,2.25,D-.42,D-.06,km.clear);K(.82,1.12,2.25,2.37,D-.4,D-.08,km.shelf);K(.82,1.12,2.37,2.58,D-.4,D-.08,km.clear);
- K(1.17,1.19,2.02,2.62,D-.4,D-.05,mat.frame);K(1.2,1.22,2.02,2.55,D-.38,D-.07,km.frameD);K(1.23,1.25,2.02,2.48,D-.36,D-.09,km.card);
- K(1.32,W,2.02,2.36,D-.42,D-.02,km.card);K(1.38,1.74,2.36,2.52,D-.4,D-.06,km.shelf);
- K(W-.42,W-.05,2.02,2.46,.04,.48,km.suit);K(W-.4,W-.1,2.02,2.14,.5,.76,km.yel);K(W-.42,W-.05,2.14,2.3,.5,.86,km.brown);K(W-.42,W-.08,2.02,2.12,.78,.95,mat.mint);
-}
+// Walk-in closet (1.78 x 1.39 m). Local frame: x from the right wall seen from the door (5.77), z from the door wall (3.12).
+// The shell (hat shelves + upper rods) is fixed; the contents are two catalogue pieces, 'klkIdag' (photo 2026-11-16) and
+// 'klkForslag' (proposal), so a furnishing variant can show either one.
+const KLK={X:5.77,Z:3.12,W:1.78,D:1.39};
+{const {X,Z,W,D}=KLK,K=(x0,x1,y0,y1,z0,z1,m)=>box(X+x0,X+x1,y0,y1,Z+z0,Z+z1,m);
+ K(0,W,1.99,2.02,D-.43,D,mat.white);K(W-.43,W,1.99,2.02,0,D-.43,mat.white);
+ K(0,W,1.89,1.915,D-.29,D-.265,mat.steel);K(W-.29,W-.265,1.89,1.915,0,D-.55,mat.steel);}
+const klkMats={};const km=c=>klkMats[c]||(klkMats[c]=M(c,{roughness:.8}));
+const KLK_CL=[0xd98fb7,0xb08850,0xe3c33a,0x2d2d2d,0xd6a39a,0xa15fb5,0xe9e3d6,0x2f3b55,0x8a8a8a,0x6f7d5a];
+// helper for the two builders: boxes in closet-local coordinates, centred on the item, collision footprints recorded for walk mode
+function klkKit(g,seed){const {W,D}=KLK;g.userData.cb=[];let s=seed;const rnd=()=>{s=(s*9301+49297)%233280;return s/233280;};
+  const K=(x0,x1,y0,y1,z0,z1,c)=>{box(x0-W/2,x1-W/2,y0,y1,z0-D/2,z1-D/2,typeof c==='number'?km(c):c,g);if(y0<.5&&y1>.3)g.userData.cb.push([x0-W/2,x1-W/2,z0-D/2,z1-D/2]);};
+  const C=(x,z,r,y0,y1,c)=>{cyl(x-W/2,z-D/2,r,y0,y1,km(c),g);if(y0<.5&&y1>.3)g.userData.cb.push([x-W/2-r,x-W/2+r,z-D/2-r,z-D/2+r]);};
+  const S=(x,y,z,r,c)=>{const b=new THREE.Mesh(new THREE.SphereGeometry(r,20,14),km(c));b.position.set(x-W/2,y,z-D/2);b.castShadow=b.receiveShadow=true;g.add(b);};
+  return {K,C,S,rnd,pick:()=>KLK_CL[Math.floor(rnd()*KLK_CL.length)]};}
+function klkIdag(g){const {W,D}=KLK,{K,C,S,rnd,pick}=klkKit(g,11);
+  for(let x=.05;x<W-.05;x+=.075){const L=.85+rnd()*.3;K(x-.02,x+.02,1.88-L,1.88,D-.53,D-.03,pick());}
+  for(let z=.06;z<D-.58;z+=.065){const L=.6+rnd()*.25;K(W-.5,W-.06,1.88-L,1.88,z-.018,z+.018,pick());}
+  K(.12,.66,0,.75,.15,.6,0x2051b8);K(.3,.5,.75,.88,.25,.45,0xe5c22e);
+  K(0,.42,0,.6,.62,1.0,0xc8372d);K(.05,.35,.6,.82,.65,.95,0xe5c22e);K(.02,.05,0,.48,.5,1.0,mat.white);K(.06,.09,0,.45,.52,.98,mat.white);
+  for(const [x,z] of[[.5,.85],[.56,.9],[.62,.86]])C(x,z,.028,0,1.6,0xc59a63);
+  S(.28,.94,.8,.12,0xe58aa0);S(.12,.7,1.02,.07,0xe8642a);
+  K(.72,1.04,0,.28,.22,.52,0x23272d);K(.86,.89,.28,.95,.44,.47,0x23272d);K(.7,1.0,.05,.09,.55,.85,0x23272d);
+  K(1.0,1.5,0,.4,.05,.45,0xd9d6e2);K(1.15,1.72,0,.35,.45,.85,0x8d9296);K(.6,1.1,0,.45,.88,1.3,0x23272d);K(.62,1.0,0,.25,.58,.86,KLK_CL[0]);K(1.1,1.7,0,.3,.88,1.3,KLK_CL[5]);
+  for(let i=0;i<3;i++)K(.03,.4,2.02+i*.22,2.23+i*.22,D-.42,D-.05,mat.mint);
+  K(.42,.78,2.02,2.3,D-.42,D-.06,mat.white);K(.44,.8,2.3,2.62,D-.4,D-.08,0x4b5a3f);
+  K(.8,1.15,2.02,2.25,D-.42,D-.06,0xd9e2e4);K(.82,1.12,2.25,2.37,D-.4,D-.08,mat.white);K(.82,1.12,2.37,2.58,D-.4,D-.08,0xd9e2e4);
+  K(1.17,1.19,2.02,2.62,D-.4,D-.05,mat.frame);K(1.2,1.22,2.02,2.55,D-.38,D-.07,0x4a4038);K(1.23,1.25,2.02,2.48,D-.36,D-.09,0xc59a63);
+  K(1.32,W,2.02,2.36,D-.42,D-.02,0xc59a63);K(1.38,1.74,2.36,2.52,D-.4,D-.06,mat.white);
+  K(W-.42,W-.05,2.02,2.46,.04,.48,0x1e1f21);K(W-.4,W-.1,2.02,2.14,.5,.76,0xe5c22e);K(W-.42,W-.05,2.14,2.3,.5,.86,0x6b4a2e);K(W-.42,W-.08,2.02,2.12,.78,.95,mat.mint);}
+// proposal (klk-forslag.html): double rod for the kids on the left wall, long coats along the back, shelf on the right wall, extra top shelf at 2.35 m
+function klkForslag(g){const {W,D}=KLK,{K,rnd,pick}=klkKit(g,7);
+  K(0,W,2.34,2.37,D-.43,D,mat.white);
+  K(W-.29,W-.265,.99,1.015,0,D-.55,mat.steel);
+  for(let x=.05;x<W-.05;x+=.075){const L=.9+rnd()*.25;K(x-.02,x+.02,1.88-L,1.88,D-.53,D-.03,pick());}
+  for(let z=.06;z<D-.58;z+=.07){const L=.55+rnd()*.1;K(W-.5,W-.06,1.88-L,1.88,z-.018,z+.018,pick());}
+  for(let z=.06;z<D-.58;z+=.075){const L=.5+rnd()*.1;K(W-.5,W-.06,.98-L,.98,z-.018,z+.018,pick());}
+  for(const y of[.5,.875,1.25,1.625,2.0])K(0,.3,y,y+.025,0,D-.55,mat.white);
+  for(const z of[.1,D-.65])K(0,.012,.45,2.05,z-.012,z+.012,mat.steel);
+  const BK=[0x9a9a9a,0xcbb894,0xa9d3da];
+  for(const y of[.525,.9,1.275,1.65])for(const z of[.06,.45])K(.03,.27,y,y+.2,z,z+.32,BK[Math.floor(rnd()*3)]);
+  K(.04,.28,0,.3,.1,.45,0x333333);K(.08,.2,.3,.85,.38,.42,0x555555);
+  for(let i=0;i<3;i++){const x=.3+i*.45;K(x,x+.38,2.02,2.3,D-.42,D-.04,0xa9d3da);}
+  for(let i=0;i<4;i++)K(.05+i*.42,.43+i*.42,2.37,2.6,D-.42,D-.06,i%2?0xf4f4f4:0xdfe8ea);
+  K(W-.42,W-.05,2.02,2.24,.1,.5,0xf4f4f4);K(W-.42,W-.05,2.02,2.2,.55,.85,0x4f5a3c);}
 
 // ---------- movable furniture: builders (local frame: width along x, depth along z, front faces +z) ----------
 const matCache={};
@@ -1010,6 +1026,7 @@ const CAT={
   plant:{name:'Växt',w:.4,d:.4,m:mat.plant,b:plant},
   lamp:{name:'Golvlampa',w:.35,d:.35,m:mat.linen,b:lamp}
 };Object.assign(CAT,ART_CAT);
+Object.assign(CAT,{klkIdag:{name:'Klädkammare – idag',w:1.78,d:1.39,m:mat.white,b:klkIdag},klkForslag:{name:'Klädkammare – förslag',w:1.78,d:1.39,m:mat.white,b:klkForslag}});
 
 
 walls.traverse(o=>{o.receiveShadow=true;});
@@ -1207,6 +1224,7 @@ const CATS=[['Soffor & fåtöljer','landskrona landskronaR landskronaL sofa armc
   ['Bord','tableTeak table coffee coffeeBirch sideTableMarble pedestalTable desk'],
   ['Stolar, pallar & bänkar','chair spindlechair kitchenbench tripptrapp deskChair stool roundStool stepStool bench hallBench storageBench'],
   ['Sängar','bed bunkBed crib nightstand nightstandLegs bedsideCube'],
+  ['Klädkammare','klkIdag klkForslag'],
   ['Förvaring','wardrobe dresser chestPine retroDresser chestTv shelf greyShelf stringShelf stringShelfBlack ivar pixelCabinet recordCabinet sideboardTv tvbench shoeCabinet shoeRack coatRack storageBox toyStorage'],
   ['Belysning','lamp uplight pendant bumling flowerpot pleatLamp mushroomLamp callaLamp shadeLamp clampLamp'],
   ['Balkong','outdoorSofa outdoorChair outdoorTable raisedPlanter storagePile foldedChairs'],
@@ -1326,7 +1344,11 @@ function collectBoxes(){const out=[],b=new THREE.Box3(),pt=new THREE.Vector3();
   for(const D of doors){const leaf=D.lg.children[0];if(!leaf||!leaf.geometry)continue;leaf.updateWorldMatrix(true,false);const hw=leaf.geometry.parameters.width/2;
     for(let k=0;k<=6;k++){pt.set(-hw+2*hw*k/6,0,0).applyMatrix4(leaf.matrixWorld);out.push([pt.x-.03,pt.x+.03,pt.z-.03,pt.z+.03]);}}
   const add=o=>{if(o.material===mat.poche||o.isLight||o.userData.isDoorPivot)return;b.setFromObject(o);if(b.isEmpty())return;if(b.min.y<0.5&&b.max.y>0.3)out.push([b.min.x,b.max.x,b.min.z,b.max.z]);};
-  for(const q of STATIC_BOXES)out.push(q);if(furn.visible)furn.children.forEach(add);walk.boxes=out;}
+  for(const q of STATIC_BOXES)out.push(q);
+  if(furn.visible)for(const o of furn.children){if(!o.userData.cb){add(o);continue;}o.updateMatrixWorld(true);
+    for(const c of o.userData.cb){const a=new THREE.Vector3(c[0],.4,c[2]).applyMatrix4(o.matrixWorld),e=new THREE.Vector3(c[1],.4,c[3]).applyMatrix4(o.matrixWorld);
+      out.push([Math.min(a.x,e.x),Math.max(a.x,e.x),Math.min(a.z,e.z),Math.max(a.z,e.z)]);}}
+  walk.boxes=out;}
 function blocked(x,z){const r=.2;for(const q of walk.boxes)if(x>q[0]-r&&x<q[1]+r&&z>q[2]-r&&z<q[3]+r)return true;return false;}
 function walkStep(dt){const k=walk.keys;walk.acc+=dt;if(walk.acc>1){walk.acc=0;collectBoxes();}
   let f=(k.KeyW||k.ArrowUp?1:0)-(k.KeyS||k.ArrowDown?1:0),sd=(k.KeyD?1:0)-(k.KeyA?1:0);
