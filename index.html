@@ -404,7 +404,7 @@ function mergeMeshes(root,meshes){ // meshes: descendants of root; root's own tr
 function mergeable(o){return o.isMesh&&!o.userData.noMerge&&o.userData.doorIdx===undefined&&o.userData.lampKey===undefined&&!(o.material.transparent);}
 let STATIC_BOXES=[];
 function freezeStatic(){const b=new THREE.Box3();STATIC_BOXES=[];scene.updateMatrixWorld(true);
-  const add=o=>{if(o.material===mat.poche||o.isLight||o.userData.isDoorPivot)return;b.setFromObject(o);if(b.isEmpty())return;if(b.min.y<0.5&&b.max.y>0.3)STATIC_BOXES.push([b.min.x,b.max.x,b.min.z,b.max.z]);};
+  const add=o=>{if(o.material===mat.poche||o.isLight||o.userData.isDoorPivot||o.userData.noCollide)return;b.setFromObject(o);if(b.isEmpty())return;if(b.min.y<0.5&&b.max.y>0.3)STATIC_BOXES.push([b.min.x,b.max.x,b.min.z,b.max.z]);};
   walls.children.forEach(add);fixed.children.forEach(add);ctx.children.forEach(add);
   for(const grp of[walls,fixed,ctx])mergeMeshes(grp,grp.children.filter(mergeable));markShadow();}
 function wallBox(x0,x1,y0,y1,z0,z1){
@@ -545,9 +545,19 @@ function ceilLamp(key,kind,x,z,top){const g=new THREE.Group();fixed.add(g);top=t
 // Kitchen — positions from the measured IKEA plan, look from Henrik's photo
 // counter wall at z=2.0, run from the window (x=0) to the smyg (x=3.88); fronts at z=2.60
 const KZ0=2.0,KZ1=2.6,KF=2.618;
+// handles: today long steel bars; planned kitchen: retro bow handle in nickel (Linfalk 1353, cc 128 mm, rod Ø9, 32 mm projection, stepped rosettes)
+const KH={now:new THREE.Group(),plan:new THREE.Group()};fixed.add(KH.now,KH.plan);KH.plan.visible=false;KH.now.userData.noCollide=KH.plan.userData.noCollide=true;
+mat.nickel=M(0xdedcd6,{roughness:.16,metalness:1});
+const UNIT_CYL=new THREE.CylinderGeometry(1,1,1,16),UNIT_SPH=new THREE.SphereGeometry(1,12,8);
+function nickelHandle(parent,cx,cy,zf,cc=.128){const r=.0045,P=.032,add=(geo,sx,sy,sz,x,y,z,rx,rz)=>{const m=new THREE.Mesh(geo,mat.nickel);m.scale.set(sx,sy,sz);m.position.set(x,y,z);if(rx)m.rotation.x=rx;if(rz)m.rotation.z=rz;m.castShadow=true;parent.add(m);};
+  for(const sx of[-1,1]){const x=cx+sx*cc/2;
+    add(UNIT_CYL,.0095,.003,.0095,x,cy,zf+.0015,Math.PI/2);add(UNIT_CYL,.0075,.003,.0075,x,cy,zf+.0045,Math.PI/2);   // stepped rosette
+    add(UNIT_CYL,r,P-.006,r,x,cy,zf+.006+(P-.006)/2,Math.PI/2);add(UNIT_SPH,r,r,r,x,cy,zf+P);}                   // leg + rounded bend
+  add(UNIT_CYL,r,cc,r,cx,cy,zf+P,0,Math.PI/2);}                                                                 // grip
 function kfront(x0,x1,y0,y1,handle){const g=.0015;box(x0+g,x1-g,y0+g,y1-g,KZ1,KF,mat.kfront);
-  if(handle){const hw=Math.min(.32,(x1-x0)*.6),cx=(x0+x1)/2,hy=handle==='top'?y1-.05:y0+.05;
-    box(cx-hw/2,cx+hw/2,hy-.006,hy+.006,KF+.018,KF+.03,mat.steel);box(cx-hw/2,cx-hw/2+.012,hy-.006,hy+.006,KF,KF+.03,mat.steel);box(cx+hw/2-.012,cx+hw/2,hy-.006,hy+.006,KF,KF+.03,mat.steel);}}
+  if(handle){const hw=Math.min(.32,(x1-x0)*.6),cx=(x0+x1)/2,hy=handle==='top'?y1-.05:y0+.05,P=KH.now;
+    box(cx-hw/2,cx+hw/2,hy-.006,hy+.006,KF+.018,KF+.03,mat.steel,P);box(cx-hw/2,cx-hw/2+.012,hy-.006,hy+.006,KF,KF+.03,mat.steel,P);box(cx+hw/2-.012,cx+hw/2,hy-.006,hy+.006,KF,KF+.03,mat.steel,P);
+    nickelHandle(KH.plan,cx,hy,KF);}}
 function kdrawers(x0,x1,parts){const tot=parts.reduce((a,b)=>a+b,0);let y=.1;for(const p of parts){const h=.76*p/tot;kfront(x0,x1,y,y+h,'top');y+=h;}}
 // carcass, plinth, worktop, backsplash
 box(0.0,3.88,0,.1,KZ0,KZ1-.06,mat.kplinth);
@@ -559,8 +569,16 @@ const tileTex=(()=>{const c=document.createElement('canvas');c.width=c.height=25
 mat.ktile=M(0xffffff,{map:tileTex,roughness:.35});
 const bsTiles=box(0.0,3.88,.9,1.45,KZ0,KZ0+.012,mat.ktile);bsTiles.userData.noMerge=true;          // today: 15x15 white tiles up to the wall cabinets
 const bsUp=box(0.0,3.88,.9,1.1,KZ0,KZ0+.02,mat.kstone);bsUp.userData.noMerge=true;               // planned: 20 cm LOCKEBO upstand
-const KITCHEN={now:{front:0xb2b4b1,stone:0x3a3c3d,tiles:true},plan:{front:0xcfc8b8,stone:0x7d7064,tiles:false}};
-function applyKitchen(k){markShadow();const c=KITCHEN[k]||KITCHEN.now;mat.kfront.color.setHex(c.front);mat.kstone.color.setHex(c.stone);bsTiles.visible=c.tiles;bsUp.visible=!c.tiles;if(typeof UPPERS!=='undefined'&&UPPERS.now){UPPERS.now.visible=k!=='plan';UPPERS.plan.visible=k==='plan';}
+// planned: IKEA HAVSTORP beige fronts and LOCKEBO light-beige concrete-pattern worktop + upstand (colours white-balanced from Henrik's store photo)
+const KITCHEN={now:{front:0xb2b4b1,stone:0x3a3c3d,tiles:true,speck:false},plan:{front:0xb8ad9e,stone:0xd6cab7,tiles:false,speck:true}};
+const stoneTex={plain:(()=>{const c=document.createElement('canvas');c.width=c.height=4;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,4,4);
+    const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;})(),
+  speck:(()=>{const c=document.createElement('canvas');c.width=c.height=512;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,512,512);
+    let s=5;const r=()=>{s=(s*9301+49297)%233280;return s/233280;};
+    for(let i=0;i<7000;i++){const v=r();x.fillStyle=v<.6?'rgba(170,160,145,.28)':v<.88?'rgba(130,120,108,.3)':v<.97?'rgba(255,255,250,.5)':'rgba(95,88,80,.35)';const d=.5+r()*1.1;x.fillRect(r()*512,r()*512,d,d);}
+    const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;return t;})()};
+mat.kstone.map=stoneTex.plain;worldMapped(mat.kstone,1/.6,1/.6);
+function applyKitchen(k){markShadow();const c=KITCHEN[k]||KITCHEN.now;mat.kfront.color.setHex(c.front);mat.kstone.color.setHex(c.stone);mat.kstone.map=c.speck?stoneTex.speck:stoneTex.plain;mat.kstone.roughness=c.speck?.75:.6;bsTiles.visible=c.tiles;bsUp.visible=!c.tiles;if(typeof UPPERS!=='undefined'&&UPPERS.now){UPPERS.now.visible=KH.now.visible=k!=='plan';UPPERS.plan.visible=KH.plan.visible=k==='plan';}
   const a=document.getElementById('kNow'),b=document.getElementById('kPlan');if(a&&b){a.setAttribute('aria-pressed',String(k!=='plan'));b.setAttribute('aria-pressed',String(k==='plan'));}
   try{localStorage.setItem('lgh35-kitchen',k);}catch(e){}}
 // base run (left → right): drawers 40, dishwasher 60, sink 80, drawers 40+40, range 60, drawers 60
@@ -586,20 +604,21 @@ box(2.68,3.24,.9,.912,KZ0+.04,KZ1,mat.glassblk);                        // ceram
 // wall cabinets: today bottom 1.45 / top 2.35 (90 cm doors, estimated from the photo); planned kitchen tests 100 cm doors (top 2.45).
 // Each version is its own sub-group of `fixed` (sub-groups are not merged), toggled in applyKitchen.
 const UZ1=KZ0+.37,UB=1.45,UPPERS={},kbox=box;
-function buildUppers(UT){const P=new THREE.Group();fixed.add(P);const box=(x0,x1,y0,y1,z0,z1,m)=>kbox(x0,x1,y0,y1,z0,z1,m,P);
+function buildUppers(UT,nick){const P=new THREE.Group();fixed.add(P);const box=(x0,x1,y0,y1,z0,z1,m)=>kbox(x0,x1,y0,y1,z0,z1,m,P);
 box(0,2.36,UB,UT,KZ0,UZ1-.018,mat.kplinth); box(3.26,3.88,UB,UT,KZ0,UZ1-.018,mat.kplinth);
 {const n=6,w=2.36/n;for(let k=0;k<n;k++){const x0=k*w,x1=x0+w,g=.0015;box(x0+g,x1-g,UB+g,UT-g,UZ1-.018,UZ1,mat.kfront);
-  const cx=k%2===0?x1-.06:x0+.06;box(cx-.15,cx+.15,UB+.05-.006,UB+.05+.006,UZ1+.012,UZ1+.024,mat.steel);}}
-box(3.261,3.879,UB+.0015,UT-.0015,UZ1-.018,UZ1,mat.kfront); box(3.42,3.72,UB+.044,UB+.056,UZ1+.012,UZ1+.024,mat.steel);
+  const cx=k%2===0?x1-.09:x0+.09;if(nick)nickelHandle(P,cx,UB+.05,UZ1);else box(cx-.15,cx+.15,UB+.05-.006,UB+.05+.006,UZ1+.012,UZ1+.024,mat.steel);}}
+box(3.261,3.879,UB+.0015,UT-.0015,UZ1-.018,UZ1,mat.kfront); if(nick)nickelHandle(P,3.57,UB+.05,UZ1);else box(3.42,3.72,UB+.044,UB+.056,UZ1+.012,UZ1+.024,mat.steel);
 // open niche with shelves next to the hood
 box(2.36,2.66,UB,UT,KZ0,KZ0+.015,mat.kplinth); box(2.36,2.375,UB,UT,KZ0,UZ1,mat.kplinth); box(2.645,2.66,UB,UT,KZ0,UZ1,mat.kplinth);
 for(const y of[UB,1.75,2.05,UT-.015])box(2.375,2.645,y,y+.015,KZ0,UZ1,mat.kplinth);
 // short cabinet above a slim pull-out hood
 box(2.66,3.26,1.88,UT,KZ0,UZ1-.018,mat.kplinth); box(2.6615,3.2585,1.8815,UT-.0015,UZ1-.018,UZ1,mat.kfront);
-box(2.81,3.11,1.924,1.936,UZ1+.012,UZ1+.024,mat.steel);
+if(nick)nickelHandle(P,2.96,1.93,UZ1);else box(2.81,3.11,1.924,1.936,UZ1+.012,UZ1+.024,mat.steel);
 box(2.67,3.25,1.80,1.88,KZ0,UZ1+.02,mat.inox);
   return P;}
-UPPERS.now=buildUppers(2.35);UPPERS.plan=buildUppers(2.45);UPPERS.plan.visible=false;
+UPPERS.now=buildUppers(2.35,false);UPPERS.plan=buildUppers(2.45,true);UPPERS.plan.visible=false;
+for(const G of[KH.now,KH.plan,UPPERS.now,UPPERS.plan]){G.updateMatrixWorld(true);mergeMeshes(G,G.children.filter(o=>o.isMesh));}
 // LED strip under the wall cabinets + warm fill light on the worktop
 {const g=new THREE.Group();fixed.add(g);const m=glowMat(0xffe2b0,0xd8d4cc);for(const [a,b] of [[0,2.36],[3.26,3.88]]) box(a+.02,b-.02,UB-.006,UB,UZ1-.06,UZ1-.03,m,g,false);
  const L=regLamp('kitchen-led',g,[1.6,1.38,2.3],0xffd9a0,.45,2.2,[m]);for(const x of[.5,3.55]){const l2=new THREE.PointLight(0xffeedd,.2*Math.PI*2.8,1.6,2);l2.userData.int0=l2.intensity;l2.position.set(x,1.38,2.3);g.add(l2);L.extra=(L.extra||[]).concat(l2);}}
