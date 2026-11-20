@@ -80,7 +80,7 @@ Se `tools/qa/README.md`. Kör `tools/qa/run.sh`, eller `GPU=1 tools/qa/run.sh` f
 
 ```
 walls  tri 2256   sx -2657.61  sy 9676.75  sz -3352.39
-fixed  tri 11324  sx -18702.44 sy 59126.37 sz -48214.46
+fixed  tri 11648  sx -21177.08 sy 60916.11 sz -50751.29
 ctx    tri 264    sx -750.51   sy 337.32   sz -522.18
 furn   tri 27966  sx 34296.72  sy 61657.95 sz 125267.49
 ```
@@ -89,6 +89,7 @@ furn   tri 27966  sx 34296.72  sy 61657.95 sz 125267.49
 
 ## Status och plan
 
+- Köket: överskåpen finns i två versioner (`UPPERS.now` 90 cm luckor, överkant 2,35; `UPPERS.plan` 100 cm, överkant 2,45), egna undergrupper i `fixed` som inte slås ihop och växlas i `applyKitchen`.
 - Klädkammaren: skalet (hatthyllor + övre stänger) ligger i `fixed`. Innehållet är två katalogtyper, `klkIdag` (foto 2026-11-16) och `klkForslag` (förslaget från `klk-forslag.html`), placerade i x 6.66, z 3.815, så att en möbleringsvariant kan visa det ena eller det andra. `seed.json` har `klk-idag`. Deras kollisionsytor för gå runt-läget ligger i `g.userData.cb`.
 - Klart: Fas 0 (prestanda), Fas 1 (gränssnitt med flikar, inspektör, solreglage och mobilpanel), Fas 2 (möbleringsverktyg), Fas 3 (grafik r170), rendering i webbläsaren och 10 cm parkett.
 - Renderingen är bara provad med mjukvarugrafik (≈8 s per omgång). Den behöver verifieras och kalibreras på riktigt grafikkort: exponering, portalernas styrka `2.2*d*k` och env-styrkan `.1+1.1*d`.
