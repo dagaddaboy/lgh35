@@ -80,16 +80,17 @@ Se `tools/qa/README.md`. Kör `tools/qa/run.sh`, eller `GPU=1 tools/qa/run.sh` f
 
 ```
 walls  tri 2256   sx -2657.61  sy 9676.75  sz -3352.39
-fixed  tri 30368  sx -180983.84 sy 110890.8 sz -182356.54
+fixed  tri 33440  sx -208004.97 sy 117596.83 sz -205962.19
 ctx    tri 264    sx -750.51   sy 337.32   sz -522.18
 furn   tri 27966  sx 34296.72  sy 61657.95 sz 125267.49
 ```
 
-Även `errors: []`, `lamps: 21`, `doors: 8`, `boxCount: 246`, och att `programsAfterLampToggle` är lika med `nightPrograms`.
+Även `errors: []`, `lamps: 21`, `doors: 8`, `boxCount: 248`, och att `programsAfterLampToggle` är lika med `nightPrograms`.
 
 ## Status och plan
 
 - Köket, planerat (`KITCHEN.plan`): IKEA HAVSTORP beige luckor (`0xb8ad9e`) och LOCKEBO ljusbeige bänkskiva/sockel (`0xd6cab7` + prickig textur `stoneTex.speck`, världsmappad via `worldMapped`). `applyKitchen` byter färg och textur (idag: `stoneTex.plain`).
+- Köket: bänkskivan är delad runt spisen (x 2,66–3,26) och diskbänkens urtag (`SU`, x 0,52–1,82). Diskbänken (foto 2026-11-21) är en rostfri enhet: räfflad torkyta till vänster över diskmaskinen, stor rundad ho och liten ho till höger (`BOWLS`, ExtrudeGeometry via `rrPath`/`slab`). `SINK.now` = ilagd ram 6 mm över skivan, `SINK.plan` = samma enhet plan med skivan. Spisen är modellerad efter er SMEG (60 cm, induktion, 3+3 rattar, display, sockellist).
 - Köket: handtagen ligger i `KH.now` (stålstänger) och `KH.plan` (Linfalk 1353 nickel, cc 128, `nickelHandle()`), undergrupper som slås ihop var för sig, växlas i `applyKitchen` och har `userData.noCollide`.
 - Köket: överskåpen finns i två versioner (`UPPERS.now` 90 cm luckor, överkant 2,35; `UPPERS.plan` 100 cm, överkant 2,45), egna undergrupper i `fixed` som inte slås ihop och växlas i `applyKitchen`.
 - Klädkammaren: skalet (hatthyllor + övre stänger) ligger i `fixed`. Innehållet är två katalogtyper, `klkIdag` (foto 2026-11-16) och `klkForslag` (förslaget från `klk-forslag.html`), placerade i x 6.66, z 3.815, så att en möbleringsvariant kan visa det ena eller det andra. `seed.json` har `klk-idag`. Deras kollisionsytor för gå runt-läget ligger i `g.userData.cb`.

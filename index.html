@@ -561,8 +561,11 @@ function kfront(x0,x1,y0,y1,handle){const g=.0015;box(x0+g,x1-g,y0+g,y1-g,KZ1,KF
 function kdrawers(x0,x1,parts){const tot=parts.reduce((a,b)=>a+b,0);let y=.1;for(const p of parts){const h=.76*p/tot;kfront(x0,x1,y,y+h,'top');y+=h;}}
 // carcass, plinth, worktop, backsplash
 box(0.0,3.88,0,.1,KZ0,KZ1-.06,mat.kplinth);
-box(0.0,2.66,.1,.86,KZ0,KZ1,mat.kplinth); box(3.26,3.88,.1,.86,KZ0,KZ1,mat.kplinth);
-box(0.0,3.88,.86,.9,KZ0,2.635,mat.kstone);
+box(0.0,1.06,.1,.86,KZ0,KZ1,mat.kplinth); box(1.82,2.66,.1,.86,KZ0,KZ1,mat.kplinth); box(1.06,1.82,.1,.70,KZ0,KZ1,mat.kplinth); // sink cabinet is lower inside for the bowls box(3.26,3.88,.1,.86,KZ0,KZ1,mat.kplinth);
+// worktop in pieces: interrupted by the freestanding range (x 2.66–3.26) and cut out for the sink unit (x 0.52–1.82, z 2.08–2.56)
+const WT0=.86,WT1=.9,KZE=2.635,SU={x0:.52,x1:1.82,z0:2.08,z1:2.56};
+box(0.0,SU.x0,WT0,WT1,KZ0,KZE,mat.kstone);box(SU.x1,2.66,WT0,WT1,KZ0,KZE,mat.kstone);box(3.26,3.88,WT0,WT1,KZ0,KZE,mat.kstone);
+box(SU.x0,SU.x1,WT0,WT1,KZ0,SU.z0,mat.kstone);box(SU.x0,SU.x1,WT0,WT1,SU.z1,KZE,mat.kstone);
 const tileTex=(()=>{const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle='#f3f3f1';x.fillRect(0,0,256,256);
   x.strokeStyle='#c9cac6';x.lineWidth=3;for(let i=0;i<=256;i+=32){x.beginPath();x.moveTo(i,0);x.lineTo(i,256);x.stroke();x.beginPath();x.moveTo(0,i);x.lineTo(256,i);x.stroke();}
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;t.repeat.set(3.88/1.2,.55/1.2);return t;})();
@@ -578,7 +581,7 @@ const stoneTex={plain:(()=>{const c=document.createElement('canvas');c.width=c.h
     for(let i=0;i<7000;i++){const v=r();x.fillStyle=v<.6?'rgba(170,160,145,.28)':v<.88?'rgba(130,120,108,.3)':v<.97?'rgba(255,255,250,.5)':'rgba(95,88,80,.35)';const d=.5+r()*1.1;x.fillRect(r()*512,r()*512,d,d);}
     const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;return t;})()};
 mat.kstone.map=stoneTex.plain;worldMapped(mat.kstone,1/.6,1/.6);
-function applyKitchen(k){markShadow();const c=KITCHEN[k]||KITCHEN.now;mat.kfront.color.setHex(c.front);mat.kstone.color.setHex(c.stone);mat.kstone.map=c.speck?stoneTex.speck:stoneTex.plain;mat.kstone.roughness=c.speck?.75:.6;bsTiles.visible=c.tiles;bsUp.visible=!c.tiles;if(typeof UPPERS!=='undefined'&&UPPERS.now){UPPERS.now.visible=KH.now.visible=k!=='plan';UPPERS.plan.visible=KH.plan.visible=k==='plan';}
+function applyKitchen(k){markShadow();const c=KITCHEN[k]||KITCHEN.now;mat.kfront.color.setHex(c.front);mat.kstone.color.setHex(c.stone);mat.kstone.map=c.speck?stoneTex.speck:stoneTex.plain;mat.kstone.roughness=c.speck?.75:.6;bsTiles.visible=c.tiles;bsUp.visible=!c.tiles;if(typeof UPPERS!=='undefined'&&UPPERS.now){UPPERS.now.visible=KH.now.visible=k!=='plan';UPPERS.plan.visible=KH.plan.visible=k==='plan';SINK.now.visible=k!=='plan';SINK.plan.visible=k==='plan';}
   const a=document.getElementById('kNow'),b=document.getElementById('kPlan');if(a&&b){a.setAttribute('aria-pressed',String(k!=='plan'));b.setAttribute('aria-pressed',String(k==='plan'));}
   try{localStorage.setItem('lgh35-kitchen',k);}catch(e){}}
 // base run (left → right): drawers 40, dishwasher 60, sink 80, drawers 40+40, range 60, drawers 60
@@ -589,18 +592,37 @@ box(.56,.96,.74,.752,KF+.02,KF+.032,mat.steel);
 kfront(1.06,1.46,.1,.86,'top'); kfront(1.46,1.86,.1,.86,'top');           // sink cabinet
 kdrawers(1.86,2.26,[.8,1.1,1.1]); kdrawers(2.26,2.66,[.8,1.1,1.1]);
 kdrawers(3.26,3.88,[1,1,1]);
-// double sink + tall mixer
-box(1.13,1.43,.885,.902,2.13,2.5,mat.inox); box(1.49,1.79,.885,.902,2.13,2.5,mat.inox);
+// sink (photo 2026-11-21): one stainless unit – ribbed drainer on the left over the dishwasher, large rounded bowl, small bowl on the right.
+// today: inset, the flange lies 6 mm proud of the worktop; planned: the same unit flush with the LOCKEBO top
+function rrPath(p,x0,z0,x1,z1,r){p.moveTo(x0+r,-z0);p.lineTo(x1-r,-z0);p.quadraticCurveTo(x1,-z0,x1,-z0-r);p.lineTo(x1,-z1+r);p.quadraticCurveTo(x1,-z1,x1-r,-z1);
+  p.lineTo(x0+r,-z1);p.quadraticCurveTo(x0,-z1,x0,-z1+r);p.lineTo(x0,-z0-r);p.quadraticCurveTo(x0,-z0,x0+r,-z0);return p;}
+function slab(shape,y0,h,m,parent){const g=new THREE.ExtrudeGeometry(shape,{depth:h,bevelEnabled:false,curveSegments:10});const me=new THREE.Mesh(g,m);me.rotation.x=-Math.PI/2;me.position.y=y0;me.castShadow=me.receiveShadow=true;parent.add(me);return me;}
+const bowlMat=M(0xa9adad,{roughness:.38,metalness:.6,side:THREE.DoubleSide});
+const BOWLS=[[1.07,2.13,1.45,2.50,.09],[1.50,2.15,1.77,2.48,.06]],BY=.72;
+for(const [x0,z0,x1,z1,r] of BOWLS){const t=.008;
+  const wall=rrPath(new THREE.Shape(),x0-t,z0-t,x1+t,z1+t,r+t);wall.holes.push(rrPath(new THREE.Path(),x0,z0,x1,z1,r));slab(wall,BY,WT1-.006-BY,bowlMat,fixed);
+  slab(rrPath(new THREE.Shape(),x0,z0,x1,z1,r),BY-.004,.004,mat.inox,fixed);cyl((x0+x1)/2,(z0+z1)/2+.04,.03,BY,BY+.003,mat.steel);}
+const SINK={now:new THREE.Group(),plan:new THREE.Group()};fixed.add(SINK.now,SINK.plan);SINK.plan.visible=false;SINK.now.userData.noCollide=SINK.plan.userData.noCollide=true;
+for(const [G,y0] of[[SINK.now,WT1],[SINK.plan,WT1-.006]]){const top=rrPath(new THREE.Shape(),SU.x0+.002,SU.z0+.002,SU.x1-.002,SU.z1-.002,.03);
+  for(const [x0,z0,x1,z1,r] of BOWLS)top.holes.push(rrPath(new THREE.Path(),x0,z0,x1,z1,r));slab(top,y0,.006,mat.inox,G);
+  for(let k=0;k<6;k++){const z=2.17+k*.055;box(.60,1.0,y0+.006,y0+.009,z-.006,z+.006,mat.inox,G);}}   // drainer ribs
+for(const G of[SINK.now,SINK.plan]){G.updateMatrixWorld(true);mergeMeshes(G,G.children.filter(o=>o.isMesh));}
 cyl(1.46,2.08,.025,.9,.96,mat.inox); cyl(1.46,2.08,.012,.96,1.30,mat.inox);
 box(1.448,1.472,1.285,1.305,2.08,2.30,mat.inox); cyl(1.46,2.29,.011,1.20,1.30,mat.inox);
-// freestanding range (SMEG-type, 60 cm) on legs
-box(2.665,3.255,.1,.9,KZ0+.02,KZ1+.02,mat.inox);
-for(const lx of[2.71,3.21])for(const lz of[2.1,2.55])cyl(lx,lz,.018,0,.1,mat.inox);
-box(2.70,3.22,.18,.66,KZ1+.02,KZ1+.026,mat.glassblk);                   // oven door glass
-box(2.72,3.20,.70,.712,KZ1+.04,KZ1+.052,mat.inox);                       // oven handle
-box(2.665,3.255,.76,.9,KZ1+.02,KZ1+.03,mat.inox);
-for(let k=0;k<5;k++)cyl(2.74+k*.11,KZ1+.04,.018,.82,.84,mat.black).rotation.x=Math.PI/2;
-box(2.68,3.24,.9,.912,KZ0+.04,KZ1,mat.glassblk);                        // ceramic hob
+// SMEG freestanding range 60 cm (photo): stainless body on chrome legs, black-glass oven door with stainless frame and bar handle,
+// control panel with 3 + 3 knobs and a blue clock display, induction top in a stainless frame, vent strip at the back, SMEG plinth strip
+{const X0=2.665,X1=3.255,ZB=KZ0+.02,ZF=KZ1+.02,blue=new THREE.MeshBasicMaterial({color:0x3a7bd5,clippingPlanes:C});
+  box(X0,X1,.06,WT1,ZB,ZF,mat.inox);
+  for(const lx of[X0+.04,X1-.04])for(const lz of[ZB+.05,ZF-.05])cyl(lx,lz,.016,0,.06,mat.steel);
+  box(X0+.005,X1-.005,.07,.165,ZF,ZF+.004,mat.inox);box(2.93,2.99,.11,.122,ZF+.004,ZF+.006,mat.black);                       // plinth strip + logo
+  box(X0+.005,X1-.005,.17,.70,ZF,ZF+.012,mat.inox);box(X0+.035,X1-.035,.2,.645,ZF+.012,ZF+.016,mat.glassblk);              // door frame + glass
+  box(X0+.05,X1-.05,.665,.68,ZF+.045,ZF+.06,mat.steel);for(const hx of[X0+.06,X1-.06])box(hx-.008,hx+.008,.665,.68,ZF+.012,ZF+.05,mat.steel); // handle
+  box(X0+.005,X1-.005,.72,.88,ZF,ZF+.006,mat.inox);                                                                        // control panel
+  for(const kx of[X0+.05,X0+.11,X0+.17,X1-.17,X1-.11,X1-.05]){const k=new THREE.Mesh(UNIT_CYL,mat.black);k.scale.set(.018,.025,.018);k.rotation.x=Math.PI/2;k.position.set(kx,.80,ZF+.018);fixed.add(k);
+    const r=new THREE.Mesh(UNIT_CYL,mat.steel);r.scale.set(.02,.004,.02);r.rotation.x=Math.PI/2;r.position.set(kx,.80,ZF+.008);fixed.add(r);}
+  box(2.91,3.01,.775,.825,ZF+.006,ZF+.009,mat.glassblk);box(2.935,2.985,.792,.808,ZF+.009,ZF+.0095,blue);                 // clock display
+  box(X0,X1,WT1,WT1+.006,ZB+.04,ZF,mat.inox);box(X0+.02,X1-.02,WT1+.006,WT1+.01,ZB+.06,ZF-.02,mat.glassblk);              // induction top in frame
+  box(X0,X1,WT1,WT1+.03,ZB,ZB+.04,mat.inox);for(let k=0;k<14;k++){const x=X0+.05+k*.035;box(x,x+.02,WT1+.03,WT1+.031,ZB+.012,ZB+.028,mat.black);}} // rear vent
 // wall cabinets: today bottom 1.45 / top 2.35 (90 cm doors, estimated from the photo); planned kitchen tests 100 cm doors (top 2.45).
 // Each version is its own sub-group of `fixed` (sub-groups are not merged), toggled in applyKitchen.
 const UZ1=KZ0+.37,UB=1.45,UPPERS={},kbox=box;
@@ -612,10 +634,11 @@ box(3.261,3.879,UB+.0015,UT-.0015,UZ1-.018,UZ1,mat.kfront); if(nick)nickelHandle
 // open niche with shelves next to the hood
 box(2.36,2.66,UB,UT,KZ0,KZ0+.015,mat.kplinth); box(2.36,2.375,UB,UT,KZ0,UZ1,mat.kplinth); box(2.645,2.66,UB,UT,KZ0,UZ1,mat.kplinth);
 for(const y of[UB,1.75,2.05,UT-.015])box(2.375,2.645,y,y+.015,KZ0,UZ1,mat.kplinth);
-// short cabinet above a slim pull-out hood
-box(2.66,3.26,1.88,UT,KZ0,UZ1-.018,mat.kplinth); box(2.6615,3.2585,1.8815,UT-.0015,UZ1-.018,UZ1,mat.kfront);
-if(nick)nickelHandle(P,2.96,1.93,UZ1);else box(2.81,3.11,1.924,1.936,UZ1+.012,UZ1+.024,mat.steel);
-box(2.67,3.25,1.80,1.88,KZ0,UZ1+.02,mat.inox);
+// slim pull-out hood level with the wall-cabinet bottoms (UB = 1.45, ~54 cm above the hob), cabinet above it up to the top line
+const HB=UB,HT=UB+.08;
+box(2.66,3.26,HT,UT,KZ0,UZ1-.018,mat.kplinth); box(2.6615,3.2585,HT+.0015,UT-.0015,UZ1-.018,UZ1,mat.kfront);
+if(nick)nickelHandle(P,2.96,HT+.05,UZ1);else box(2.81,3.11,HT+.044,HT+.056,UZ1+.012,UZ1+.024,mat.steel);
+box(2.67,3.25,HB,HT,KZ0,UZ1+.02,mat.inox);box(2.72,3.20,HB-.002,HB,KZ0+.05,UZ1-.03,mat.glassblk);  // hood body + filter underside
   return P;}
 UPPERS.now=buildUppers(2.35,false);UPPERS.plan=buildUppers(2.45,true);UPPERS.plan.visible=false;
 for(const G of[KH.now,KH.plan,UPPERS.now,UPPERS.plan]){G.updateMatrixWorld(true);mergeMeshes(G,G.children.filter(o=>o.isMesh));}
